@@ -8,7 +8,7 @@ public class MicrosoftOneDriveClient : RestClient
     public MicrosoftOneDriveClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) 
         : base(new RestClientOptions
         {
-            ThrowOnAnyError = true, BaseUrl = GetBaseUrl() 
+            ThrowOnAnyError = false, BaseUrl = GetBaseUrl() 
         }) { }
 
     private static Uri GetBaseUrl()
