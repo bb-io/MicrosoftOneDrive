@@ -22,7 +22,7 @@ public class ConnectionDefinition : IConnectionDefinition
         yield return new AuthenticationCredentialsProvider(
             AuthenticationCredentialsRequestLocation.None,
             "Authorization",
-            $"{token.Value}"
+            $"Bearer {token.Value}"
         );
     }
 }

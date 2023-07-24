@@ -1,21 +1,18 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
-using Microsoft.Graph;
-using Microsoft.Kiota.Abstractions.Authentication;
+using RestSharp;
 
 namespace Apps.MicrosoftOneDrive;
 
-public class MicrosoftOneDriveClient : GraphServiceClient
+public class MicrosoftOneDriveClient : RestClient
 {
-    public MicrosoftOneDriveClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) :
-        base(GetAuthenticationProvider(authenticationCredentialsProviders))
+    public MicrosoftOneDriveClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) 
+        : base(new RestClientOptions
+        {
+            ThrowOnAnyError = true, BaseUrl = GetBaseUrl() 
+        }) { }
+
+    private static Uri GetBaseUrl()
     {
-    }
-    
-    private static BaseBearerTokenAuthenticationProvider GetAuthenticationProvider(
-        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
-    {
-        var token = authenticationCredentialsProviders.First(p => p.KeyName == "Authorization").Value;
-        var accessTokenProvider = new AccessTokenProvider(token);
-        return new BaseBearerTokenAuthenticationProvider(accessTokenProvider);
+        return new Uri("https://graph.microsoft.com/v1.0/me/drive");
     }
 }
