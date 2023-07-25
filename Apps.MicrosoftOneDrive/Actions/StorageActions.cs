@@ -113,9 +113,11 @@ public class StorageActions
         };
     }
     
-    [Action("Upload file", Description = "Upload file to parent folder with specified ID. File must be up to 4MB in size.")]
-    public async Task<FileMetadataDto> UploadFile(
+    [Action("Upload file in folder by ID", Description = "Upload file to parent folder with specified ID. File must " +
+                                                         "be up to 4MB in size.")]
+    public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        [ActionParameter] [Display("Parent folder ID")] string parentFolderId,
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
@@ -123,7 +125,7 @@ public class StorageActions
             throw new ArgumentException("Size of the file must be under 4 MB.");
         
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var request = new MicrosoftOneDriveRequest($".//items/{input.ParentFolderId}:/{input.Filename}:/content", 
+        var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.Filename}:/content", 
             Method.Put, authenticationCredentialsProviders);
         if (!MimeTypes.TryGetMimeType(input.Filename, out var mimeType))
             mimeType = "application/octet-stream";
@@ -133,6 +135,40 @@ public class StorageActions
         if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
             throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
         
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new Exception(ErrorMessages.UnauthorizedMessage);
+            
+        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
+        return fileMetadata;
+    }
+    
+    [Action("Upload file at path", Description = "Upload file to parent folder specified as path relative to the root " +
+                                                 "folder. File must be up to 4MB in size. If path is not specified, " +
+                                                 "file is uploaded to the root folder. If the specified path does not " +
+                                                 "exist, the corresponding folder structure is created.")]
+    public async Task<FileMetadataDto> UploadFileAtPath(
+        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        [ActionParameter] [Display("Path relative to drive's root")] string? pathRelativeToRoot,
+        [ActionParameter] UploadFileRequest input)
+    {
+        const int fourMegabytesInBytes = 4194304;
+        if (input.File.Length > fourMegabytesInBytes)
+            throw new ArgumentException("Size of the file must be under 4 MB.");
+        
+        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        MicrosoftOneDriveRequest request;
+        if (pathRelativeToRoot != null) 
+            request = new MicrosoftOneDriveRequest($".//root:/{pathRelativeToRoot}/{input.Filename}:/content", Method.Put, 
+                authenticationCredentialsProviders);
+        else
+            request = new MicrosoftOneDriveRequest($".//root:/{input.Filename}:/content", Method.Put, 
+                authenticationCredentialsProviders);
+
+        if (!MimeTypes.TryGetMimeType(input.Filename, out var mimeType))
+            mimeType = "application/octet-stream";
+        request.AddParameter(mimeType, input.File, ParameterType.RequestBody);
+        var response = await client.ExecuteAsync(request);
+
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
             

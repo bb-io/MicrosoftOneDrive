@@ -4,9 +4,6 @@ namespace Apps.MicrosoftOneDrive.Models.Requests;
 
 public class UploadFileRequest
 {
-    [Display("Parent folder ID")]
-    public string ParentFolderId { get; set; }
-    
     public string Filename { get; set; }
     
     public byte[] File { get; set; }
