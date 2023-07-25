@@ -12,8 +12,3 @@ public class UserDto
     [Display("Display name")]
     public string DisplayName { get; set; }
 }
-
-public class UserWrapper
-{
-    public UserDto User { get; set; }
-}
