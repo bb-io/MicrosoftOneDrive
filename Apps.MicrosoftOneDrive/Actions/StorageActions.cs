@@ -276,14 +276,15 @@ public class StorageActions
     [Action("Create folder in parent folder with ID", Description = "Create a new folder in parent folder with specified ID.")]
     public async Task<FolderMetadataDto> CreateFolderInParentFolderWithId(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] CreateFolderInParentFolderWithIdRequest input)
+        [ActionParameter] [Display("Parent folder ID")] string parentFolderId,
+        [ActionParameter] [Display("Folder name")] string folderName)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var request = new MicrosoftOneDriveRequest($"/items/{input.ParentFolderId}/children", Method.Post, 
+        var request = new MicrosoftOneDriveRequest($"/items/{parentFolderId}/children", Method.Post, 
             authenticationCredentialsProviders);
         request.AddJsonBody(new
         {
-            Name = input.FolderName,
+            Name = folderName,
             Folder = new { }
         });
         var response = await client.ExecuteAsync(request);
@@ -306,19 +307,20 @@ public class StorageActions
                                                    "is not specified, folder is created at the root.")]
     public async Task<FolderMetadataDto> CreateFolderAtPath(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] CreateFolderAtPathRequest input)
+        [ActionParameter] [Display("Path relative to drive's root")] string? pathRelativeToRoot,
+        [ActionParameter] [Display("Folder name")] string folderName)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         MicrosoftOneDriveRequest request;
-        if (input.PathRelativeToRoot != null) 
-            request = new MicrosoftOneDriveRequest($".//root:/{input.PathRelativeToRoot}:/children", Method.Post, 
+        if (pathRelativeToRoot != null) 
+            request = new MicrosoftOneDriveRequest($".//root:/{pathRelativeToRoot}:/children", Method.Post, 
                 authenticationCredentialsProviders);
         else
             request = new MicrosoftOneDriveRequest("/root/children", Method.Post, authenticationCredentialsProviders);
 
         request.AddJsonBody(new
         {
-            Name = input.FolderName,
+            Name = folderName,
             Folder = new { }
         });
         var response = await client.ExecuteAsync(request);
