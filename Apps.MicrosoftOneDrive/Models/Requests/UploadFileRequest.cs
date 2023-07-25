@@ -1,6 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.MicrosoftOneDrive.Models.File.Requests;
+namespace Apps.MicrosoftOneDrive.Models.Requests;
 
 public class UploadFileRequest
 {

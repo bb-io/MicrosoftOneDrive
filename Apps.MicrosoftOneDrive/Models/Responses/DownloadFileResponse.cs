@@ -1,4 +1,4 @@
-﻿namespace Apps.MicrosoftOneDrive.Models.File.Responses;
+﻿namespace Apps.MicrosoftOneDrive.Models.Responses;
 
 public class DownloadFileResponse
 {

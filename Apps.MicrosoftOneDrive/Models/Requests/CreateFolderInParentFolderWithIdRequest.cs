@@ -1,6 +1,6 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.MicrosoftOneDrive.Models.Folder.Requests;
+namespace Apps.MicrosoftOneDrive.Models.Requests;
 
 public class CreateFolderInParentFolderWithIdRequest
 {
