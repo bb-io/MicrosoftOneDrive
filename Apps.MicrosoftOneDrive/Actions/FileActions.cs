@@ -1,12 +1,12 @@
 ﻿using System.Net;
 using Apps.MicrosoftOneDrive.Constants;
 using Apps.MicrosoftOneDrive.Dtos;
+using Apps.MicrosoftOneDrive.Extensions;
 using Apps.MicrosoftOneDrive.Models.File.Requests;
 using Apps.MicrosoftOneDrive.Models.File.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
-using Newtonsoft.Json;
 using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.Actions;
@@ -29,7 +29,7 @@ public class FileActions
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
             
-        var fileMetadata = DeserializeResponseContent<FileMetadataDto>(response.Content);
+        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         if (fileMetadata.MimeType == null) 
             throw new Exception("Provided ID points to folder, not file.");
         
@@ -53,7 +53,7 @@ public class FileActions
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
         
-        var fileMetadata = DeserializeResponseContent<FileMetadataDto>(response.Content);
+        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         if (fileMetadata.MimeType == null)
             throw new Exception($"Provided path '{filePathRelativeToRoot}' points to folder, not file.");
         
@@ -134,7 +134,7 @@ public class FileActions
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
             
-        var fileMetadata = DeserializeResponseContent<FileMetadataDto>(response.Content);
+        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         return fileMetadata;
     }
     
@@ -151,15 +151,5 @@ public class FileActions
         
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
-    }
-
-    private T DeserializeResponseContent<T>(string content)
-    {
-        var deserializedContent = JsonConvert.DeserializeObject<T>(content, new JsonSerializerSettings
-            {
-                MissingMemberHandling = MissingMemberHandling.Ignore
-            }
-        );
-        return deserializedContent;
     }
 }
