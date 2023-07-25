@@ -17,10 +17,10 @@ public class FileActions
     [Action("Get file metadata by ID", Description = "Retrieve the metadata for a file in a drive by file ID.")]
     public async Task<FileMetadataResponse> GetFileMetadataById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] FileIdRequest request)
+        [ActionParameter] [Display("File ID")] string fileId)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{request.FileId}", Method.Get, 
+        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Get, 
             authenticationCredentialsProviders);
         var restResponse = await client.ExecuteAsync(oneDriveRequest);
         if (restResponse.StatusCode == HttpStatusCode.BadRequest || restResponse.StatusCode == HttpStatusCode.NotFound)
@@ -38,10 +38,10 @@ public class FileActions
                                                             "relative to the root folder.")]
     public async Task<FileMetadataResponse> GetFileMetadataByFilePath(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] FilePathRequest request)
+        [ActionParameter] [Display("File path relative to drive's root")] string filePathRelativeToRoot)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var oneDriveRequest = new MicrosoftOneDriveRequest($".//root:/{request.FilePathRelativeToRoot}", Method.Get, 
+        var oneDriveRequest = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}", Method.Get, 
             authenticationCredentialsProviders);
         var restResponse = await client.ExecuteAsync(oneDriveRequest);
         if (restResponse.StatusCode == HttpStatusCode.NotFound)
@@ -51,17 +51,17 @@ public class FileActions
         
         var fileMetadata = DeserializeResponseContent<FileMetadataDto>(restResponse.Content);
         if (fileMetadata.File == null)
-            throw new Exception($"Provided path '{request.FilePathRelativeToRoot}' points to folder, not file.");
+            throw new Exception($"Provided path '{filePathRelativeToRoot}' points to folder, not file.");
         return new FileMetadataResponse(fileMetadata);
     }
     
     [Action("Download file by ID", Description = "Download a file in a drive by file ID.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] FileIdRequest request)
+        [ActionParameter] [Display("File ID")] string fileId)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{request.FileId}/content", Method.Get, 
+        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, 
             authenticationCredentialsProviders);
         var restResponse = await client.ExecuteAsync(oneDriveRequest);
         if (restResponse.StatusCode == HttpStatusCode.BadRequest || restResponse.StatusCode == HttpStatusCode.NotFound)
@@ -82,10 +82,10 @@ public class FileActions
     [Action("Download file by file path", Description = "Download a file in a drive by file path relative to the root folder.")]
     public async Task<DownloadFileResponse> DownloadFileByFilePath(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] FilePathRequest request)
+        [ActionParameter] [Display("File path relative to drive's root")] string filePathRelativeToRoot)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var oneDriveRequest = new MicrosoftOneDriveRequest($".//root:/{request.FilePathRelativeToRoot}:/content", Method.Get, 
+        var oneDriveRequest = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}:/content", Method.Get, 
             authenticationCredentialsProviders);
         var restResponse = await client.ExecuteAsync(oneDriveRequest);
         if (restResponse.StatusCode == HttpStatusCode.NotFound)
@@ -131,10 +131,10 @@ public class FileActions
     
     [Action("Delete file", Description = "Delete file in a drive by file ID.")]
     public async Task DeleteFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] FileIdRequest request)
+        [ActionParameter] [Display("File ID")] string fileId)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{request.FileId}", Method.Delete, 
+        var oneDriveRequest = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Delete, 
             authenticationCredentialsProviders);
         var restResponse = await client.ExecuteAsync(oneDriveRequest);
         if (restResponse.StatusCode == HttpStatusCode.BadRequest || restResponse.StatusCode == HttpStatusCode.NotFound)
