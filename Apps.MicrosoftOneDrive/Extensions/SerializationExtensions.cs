@@ -8,7 +8,8 @@ public static class SerializationExtensions
     {
         var deserializedContent = JsonConvert.DeserializeObject<T>(content, new JsonSerializerSettings
             {
-                MissingMemberHandling = MissingMemberHandling.Ignore
+                MissingMemberHandling = MissingMemberHandling.Ignore,
+                DateTimeZoneHandling = DateTimeZoneHandling.Local
             }
         );
         return deserializedContent;

@@ -12,10 +12,7 @@ public class ParentReferenceDto
     
     [Display("Drive ID")]
     public string DriveId { get; set; }
-    
-    [Display("Parent folder path")]
-    public string Path { get; set; }
-    
+
     [Display("Site ID")]
     public string SiteId { get; set; }
 }

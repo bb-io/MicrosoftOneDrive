@@ -2,7 +2,7 @@
 
 namespace Apps.MicrosoftOneDrive.Models.Responses;
 
-public class ListFilesInFolderResponse
+public class ListFilesResponse
 {
     public IEnumerable<FileMetadataDto> Files { get; set; }
 }

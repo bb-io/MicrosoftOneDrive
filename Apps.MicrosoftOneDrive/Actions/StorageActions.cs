@@ -61,6 +61,37 @@ public class StorageActions
         
         return fileMetadata;
     }
+
+    [Action("List changed files", Description = "List all files that have been created or modified during past hours. " +
+                                                "If number of hours is not specified, files changed during past 24 " +
+                                                "hours are listed.")]
+    public async Task<ListFilesResponse> ListChangedFiles(
+        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        [ActionParameter] [Display("Hours")] int? hours)
+    {
+        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var endpoint = "/root/search(q='.')?$orderby=lastModifiedDateTime desc";
+        var startDateTime = (DateTime.Now - TimeSpan.FromHours(hours ?? 24)).ToUniversalTime();
+        var changedFiles = new List<FileMetadataDto>();
+        int filesCount;
+        
+        do
+        {
+            var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
+            var response = await client.ExecuteAsync(request);
+            
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new Exception(ErrorMessages.UnauthorizedMessage);
+            
+            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var files = result.Value.Where(item => item.MimeType != null && item.LastModifiedDateTime >= startDateTime);
+            filesCount = files.Count();
+            changedFiles.AddRange(files);
+            endpoint = result.ODataNextLink?.Split("drive")[1];
+        } while (endpoint != null && filesCount != 0);
+
+        return new ListFilesResponse { Files = changedFiles };
+    }
     
     [Action("Download file by ID", Description = "Download a file in a drive by file ID.")]
     public async Task<DownloadFileResponse> DownloadFileById(
@@ -227,7 +258,7 @@ public class StorageActions
     }
 
     [Action("List files in folder by ID", Description = "Retrieve metadata for files contained in a folder with specified ID.")]
-    public async Task<ListFilesInFolderResponse> ListFilesInFolderById(
+    public async Task<ListFilesResponse> ListFilesInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder ID")] string folderId)
     {
@@ -243,13 +274,13 @@ public class StorageActions
             
         var files = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content)
             .Value.Where(item => item.MimeType != null);
-        return new ListFilesInFolderResponse { Files = files };
+        return new ListFilesResponse { Files = files };
     }
     
     [Action("List files in folder by path", Description = "Retrieve metadata for files contained in a folder by folder " +
                                                           "path relative to the root folder. If path is not specified, " +
                                                           "files contained in the root are retrieved.")]
-    public async Task<ListFilesInFolderResponse> ListFilesInFolderByPath(
+    public async Task<ListFilesResponse> ListFilesInFolderByPath(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder path relative to drive's root")] string? folderPathRelativeToRoot)
     {
@@ -270,7 +301,7 @@ public class StorageActions
             
         var files = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content)
             .Value.Where(item => item.MimeType != null);
-        return new ListFilesInFolderResponse { Files = files };
+        return new ListFilesResponse { Files = files };
     }
     
     [Action("Create folder in parent folder with ID", Description = "Create a new folder in parent folder with specified ID.")]

@@ -27,9 +27,15 @@ public class FileMetadataDto
     [Display("Created by")]
     public UserDto CreatedBy { get; set; }
     
+    [Display("Created date and time")]
+    public DateTime CreatedDateTime { get; set; }
+    
     [JsonConverter(typeof(UserConverter))]
     [Display("Last modified by")]
     public UserDto LastModifiedBy { get; set; }
+    
+    [Display("Last modified date and time")]
+    public DateTime LastModifiedDateTime { get; set; }
     
     [Display("Parent reference")]
     public ParentReferenceDto ParentReference { get; set; }
