@@ -30,7 +30,7 @@ public class StorageActions
         
         if (response.StatusCode == HttpStatusCode.Unauthorized)
             throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
+
         var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         if (fileMetadata.MimeType == null) 
             throw new Exception("Provided ID points to folder, not file.");
@@ -263,18 +263,28 @@ public class StorageActions
         [ActionParameter] [Display("Folder ID")] string folderId)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var request = new MicrosoftOneDriveRequest($"/items/{folderId}/children", Method.Get, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var filesInFolder = new List<FileMetadataDto>();
+        var endpoint = $"/items/{folderId}/children";
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        do
+        {
+            var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
+            var response = await client.ExecuteAsync(request);
             
-        var files = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content)
-            .Value.Where(item => item.MimeType != null);
-        return new ListFilesResponse { Files = files };
+            if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
+                throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
+        
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new Exception(ErrorMessages.UnauthorizedMessage);
+            
+            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var files = result.Value.Where(item => item.MimeType != null);
+            filesInFolder.AddRange(files);
+            
+            endpoint = result.ODataNextLink?.Split("drive")[1];
+        } while (endpoint != null);
+        
+        return new ListFilesResponse { Files = filesInFolder };
     }
     
     [Action("List files in folder by path", Description = "Retrieve metadata for files contained in a folder by folder " +
@@ -285,23 +295,33 @@ public class StorageActions
         [ActionParameter] [Display("Folder path relative to drive's root")] string? folderPathRelativeToRoot)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        MicrosoftOneDriveRequest request;
-        if (folderPathRelativeToRoot != null) 
-            request = new MicrosoftOneDriveRequest($".//root:/{folderPathRelativeToRoot}:/children", Method.Get, 
-                authenticationCredentialsProviders);
-        else 
-            request = new MicrosoftOneDriveRequest("/root/children", Method.Get, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var filesInFolder = new List<FileMetadataDto>();
+        var endpoint = folderPathRelativeToRoot != null
+            ? $".//root:/{folderPathRelativeToRoot}:/children?$top=1"
+            : "/root/children";
+        var isEndpointWithColon = endpoint.Contains(":");
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        do
+        {
+            var request =  new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
+            var response = await client.ExecuteAsync(request);
             
-        var files = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content)
-            .Value.Where(item => item.MimeType != null);
-        return new ListFilesResponse { Files = files };
+            if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
+                throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
+        
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+                throw new Exception(ErrorMessages.UnauthorizedMessage);
+            
+            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var files = result.Value.Where(item => item.MimeType != null);
+            filesInFolder.AddRange(files);
+            
+            endpoint = result.ODataNextLink?.Split("drive")[1];
+            if (endpoint != null && isEndpointWithColon)
+                endpoint = endpoint.Insert(0, ".");
+        } while (endpoint != null);
+        
+        return new ListFilesResponse { Files = filesInFolder };
     }
     
     [Action("Create folder in parent folder with ID", Description = "Create a new folder in parent folder with specified ID.")]
