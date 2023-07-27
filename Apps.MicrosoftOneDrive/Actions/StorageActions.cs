@@ -1,7 +1,4 @@
-﻿using System.Net;
-using Apps.MicrosoftOneDrive.Constants;
-using Apps.MicrosoftOneDrive.Dtos;
-using Apps.MicrosoftOneDrive.Extensions;
+﻿using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Models.Requests;
 using Apps.MicrosoftOneDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
@@ -23,15 +20,8 @@ public class StorageActions
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Get, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-
-        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         if (fileMetadata.MimeType == null) 
             throw new Exception("Provided ID points to folder, not file.");
         
@@ -47,15 +37,8 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}", Method.Get, 
             authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-        
-        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
         if (fileMetadata.MimeType == null)
             throw new Exception($"Provided path '{filePathRelativeToRoot}' points to folder, not file.");
         
@@ -78,12 +61,7 @@ public class StorageActions
         do
         {
             var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
-            var response = await client.ExecuteAsync(request);
-            
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var result = await client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
             var files = result.Value.Where(item => item.MimeType != null && item.LastModifiedDateTime >= startDateTime);
             filesCount = files.Count();
             changedFiles.AddRange(files);
@@ -100,17 +78,12 @@ public class StorageActions
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        var response = await client.ExecuteWithHandlingWithoutDeserialization(request);
         
         var fileBytes = response.RawBytes;
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
+        
         return new DownloadFileResponse
         {
             Filename = filename,
@@ -126,17 +99,12 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}:/content", Method.Get, 
             authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        var response = await client.ExecuteWithHandlingWithoutDeserialization(request);
         
         var fileBytes = response.RawBytes;
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
+        
         return new DownloadFileResponse
         {
             Filename = filename,
@@ -158,18 +126,12 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.Filename}:/content", 
             Method.Put, authenticationCredentialsProviders);
+        
         if (!MimeTypes.TryGetMimeType(input.Filename, out var mimeType))
             mimeType = "application/octet-stream";
         request.AddParameter(mimeType, input.File, ParameterType.RequestBody);
-        var response = await client.ExecuteAsync(request);
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
+        var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         return fileMetadata;
     }
     
@@ -198,12 +160,8 @@ public class StorageActions
         if (!MimeTypes.TryGetMimeType(input.Filename, out var mimeType))
             mimeType = "application/octet-stream";
         request.AddParameter(mimeType, input.File, ParameterType.RequestBody);
-        var response = await client.ExecuteAsync(request);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-        var fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(response.Content);
+        
+        var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         return fileMetadata;
     }
     
@@ -218,15 +176,8 @@ public class StorageActions
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Get, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-        var folderMetadata = SerializationExtensions.DeserializeResponseContent<FolderMetadataDto>(response.Content);
         if (folderMetadata.ChildCount == null) 
             throw new Exception("Provided ID doesn't point to folder.");
         
@@ -242,15 +193,8 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($".//root:/{folderPathRelativeToRoot}", Method.Get, 
             authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
+        var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-        var folderMetadata = SerializationExtensions.DeserializeResponseContent<FolderMetadataDto>(response.Content);
         if (folderMetadata.ChildCount == null) 
             throw new Exception($"Provided path '{folderPathRelativeToRoot}' doesn't point to folder.");
         
@@ -269,18 +213,9 @@ public class StorageActions
         do
         {
             var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
-            var response = await client.ExecuteAsync(request);
-            
-            if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-                throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var result = await client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
             var files = result.Value.Where(item => item.MimeType != null);
             filesInFolder.AddRange(files);
-            
             endpoint = result.ODataNextLink?.Split("drive")[1];
         } while (endpoint != null);
         
@@ -297,28 +232,21 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var filesInFolder = new List<FileMetadataDto>();
         var endpoint = folderPathRelativeToRoot != null
-            ? $".//root:/{folderPathRelativeToRoot}:/children?$top=1"
+            ? $".//root:/{folderPathRelativeToRoot}:/children"
             : "/root/children";
         var isEndpointWithColon = endpoint.Contains(":");
         
         do
         {
             var request =  new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
-            var response = await client.ExecuteAsync(request);
-            
-            if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-                throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-                throw new Exception(ErrorMessages.UnauthorizedMessage);
-            
-            var result = SerializationExtensions.DeserializeResponseContent<ListWrapper<FileMetadataDto>>(response.Content);
+            var result = await client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
             var files = result.Value.Where(item => item.MimeType != null);
             filesInFolder.AddRange(files);
-            
             endpoint = result.ODataNextLink?.Split("drive")[1];
+            
             if (endpoint != null && isEndpointWithColon)
                 endpoint = endpoint.Insert(0, ".");
+            
         } while (endpoint != null);
         
         return new ListFilesResponse { Files = filesInFolder };
@@ -338,19 +266,8 @@ public class StorageActions
             Name = folderName,
             Folder = new { }
         });
-        var response = await client.ExecuteAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound
-            || response.StatusCode == HttpStatusCode.InternalServerError)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage + " or " + ErrorMessages.InvalidFolderName.ToLower());
-        
-        if (response.StatusCode == HttpStatusCode.Conflict)
-            throw new Exception(ErrorMessages.FolderWithNameAlreadyExists);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
 
-        var folderMetadata = SerializationExtensions.DeserializeResponseContent<FolderMetadataDto>(response.Content);
+        var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         return folderMetadata;
     }
     
@@ -374,18 +291,8 @@ public class StorageActions
             Name = folderName,
             Folder = new { }
         });
-        var response = await client.ExecuteAsync(request);
         
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage + " or " + ErrorMessages.InvalidFolderName.ToLower());
-        
-        if (response.StatusCode == HttpStatusCode.Conflict)
-            throw new Exception(ErrorMessages.FolderWithNameAlreadyExists);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
-
-        var folderMetadata = SerializationExtensions.DeserializeResponseContent<FolderMetadataDto>(response.Content);
+        var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         return folderMetadata;
     }
     
@@ -396,17 +303,8 @@ public class StorageActions
         [ActionParameter] [Display("File or folder ID")] string fileOrFolderId)
     {
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
-        var request = new MicrosoftOneDriveRequest($"/items/{fileOrFolderId}", Method.Delete, authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderWithIdNotFoundMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden) 
-            throw new Exception(ErrorMessages.DeletingRootFolderIsForbidden);
-        
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        var request = new MicrosoftOneDriveRequest($"/items/{fileOrFolderId}", Method.Delete, authenticationCredentialsProviders); 
+        await client.ExecuteWithHandlingWithoutDeserialization(request);
     }
     
     [Action("Delete file or folder at path", Description = "Delete file or folder at the path relative to the root folder.")]
@@ -416,15 +314,6 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
         var request = new MicrosoftOneDriveRequest($".//root:/{itemPathRelativeToRoot}", Method.Delete, 
             authenticationCredentialsProviders);
-        var response = await client.ExecuteAsync(request);
-        
-        if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
-            throw new Exception(ErrorMessages.FileOrFolderNotFoundAtPathMessage);
-        
-        if (response.StatusCode == HttpStatusCode.Forbidden)
-            throw new Exception(ErrorMessages.DeletingRootFolderIsForbidden);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-            throw new Exception(ErrorMessages.UnauthorizedMessage);
+        await client.ExecuteWithHandlingWithoutDeserialization(request);
     }
 }
