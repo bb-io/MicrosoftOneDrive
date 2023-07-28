@@ -18,12 +18,12 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("File ID")] string fileId)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Get, authenticationCredentialsProviders);
         var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         
         if (fileMetadata.MimeType == null) 
-            throw new Exception("Provided ID points to folder, not file.");
+            throw new Exception("Provided ID points to a folder, not a file.");
         
         return fileMetadata;
     }
@@ -34,13 +34,13 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("File path relative to drive's root")] string filePathRelativeToRoot)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}", Method.Get, 
             authenticationCredentialsProviders);
         var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         
         if (fileMetadata.MimeType == null)
-            throw new Exception($"Provided path '{filePathRelativeToRoot}' points to folder, not file.");
+            throw new Exception($"Provided path '{filePathRelativeToRoot}' points to a folder, not a file.");
         
         return fileMetadata;
     }
@@ -52,7 +52,7 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Hours")] int? hours)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var endpoint = "/root/search(q='.')?$orderby=lastModifiedDateTime desc";
         var startDateTime = (DateTime.Now - TimeSpan.FromHours(hours ?? 24)).ToUniversalTime();
         var changedFiles = new List<FileMetadataDto>();
@@ -76,7 +76,7 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("File ID")] string fileId)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
         var response = await client.ExecuteWithHandlingWithoutDeserialization(request);
         
@@ -96,7 +96,7 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("File path relative to drive's root")] string filePathRelativeToRoot)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($".//root:/{filePathRelativeToRoot}:/content", Method.Get, 
             authenticationCredentialsProviders);
         var response = await client.ExecuteWithHandlingWithoutDeserialization(request);
@@ -112,7 +112,7 @@ public class StorageActions
         };
     }
     
-    [Action("Upload file in folder by ID", Description = "Upload file to parent folder with specified ID. File must " +
+    [Action("Upload file to folder by ID", Description = "Upload a file to a parent folder with specified ID. File must " +
                                                          "be up to 4MB in size.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -121,9 +121,9 @@ public class StorageActions
     {
         const int fourMegabytesInBytes = 4194304;
         if (input.File.Length > fourMegabytesInBytes)
-            throw new ArgumentException("Size of the file must be under 4 MB.");
+            throw new ArgumentException("File too large. Size of the file must be under 4 MB.");
         
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.Filename}:/content", 
             Method.Put, authenticationCredentialsProviders);
         
@@ -135,7 +135,7 @@ public class StorageActions
         return fileMetadata;
     }
     
-    [Action("Upload file at path", Description = "Upload file to parent folder specified as path relative to the root " +
+    [Action("Upload file to path", Description = "Upload file to parent folder specified as path relative to the root " +
                                                  "folder. File must be up to 4MB in size. If path is not specified, " +
                                                  "file is uploaded to the root folder. If the specified path does not " +
                                                  "exist, the corresponding folder structure is created.")]
@@ -148,7 +148,7 @@ public class StorageActions
         if (input.File.Length > fourMegabytesInBytes)
             throw new ArgumentException("Size of the file must be under 4 MB.");
         
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         MicrosoftOneDriveRequest request;
         if (pathRelativeToRoot != null) 
             request = new MicrosoftOneDriveRequest($".//root:/{pathRelativeToRoot}/{input.Filename}:/content", Method.Put, 
@@ -174,12 +174,12 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder ID")] string folderId)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Get, authenticationCredentialsProviders);
         var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         
         if (folderMetadata.ChildCount == null) 
-            throw new Exception("Provided ID doesn't point to folder.");
+            throw new Exception("Provided ID doesn't point to a folder.");
         
         return folderMetadata;
     }
@@ -190,13 +190,13 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder path relative to drive's root")] string folderPathRelativeToRoot)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($".//root:/{folderPathRelativeToRoot}", Method.Get, 
             authenticationCredentialsProviders);
         var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
         
         if (folderMetadata.ChildCount == null) 
-            throw new Exception($"Provided path '{folderPathRelativeToRoot}' doesn't point to folder.");
+            throw new Exception($"Provided path '{folderPathRelativeToRoot}' doesn't point to a folder.");
         
         return folderMetadata;
     }
@@ -206,7 +206,7 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder ID")] string folderId)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var filesInFolder = new List<FileMetadataDto>();
         var endpoint = $"/items/{folderId}/children";
         
@@ -229,7 +229,7 @@ public class StorageActions
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder path relative to drive's root")] string? folderPathRelativeToRoot)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var filesInFolder = new List<FileMetadataDto>();
         var endpoint = folderPathRelativeToRoot != null
             ? $".//root:/{folderPathRelativeToRoot}:/children"
@@ -258,7 +258,7 @@ public class StorageActions
         [ActionParameter] [Display("Parent folder ID")] string parentFolderId,
         [ActionParameter] [Display("Folder name")] string folderName)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{parentFolderId}/children", Method.Post, 
             authenticationCredentialsProviders);
         request.AddJsonBody(new
@@ -278,7 +278,7 @@ public class StorageActions
         [ActionParameter] [Display("Path relative to drive's root")] string? pathRelativeToRoot,
         [ActionParameter] [Display("Folder name")] string folderName)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         MicrosoftOneDriveRequest request;
         if (pathRelativeToRoot != null) 
             request = new MicrosoftOneDriveRequest($".//root:/{pathRelativeToRoot}:/children", Method.Post, 
@@ -302,7 +302,7 @@ public class StorageActions
     public async Task DeleteFileOrFolderById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("File or folder ID")] string fileOrFolderId)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileOrFolderId}", Method.Delete, authenticationCredentialsProviders); 
         await client.ExecuteWithHandlingWithoutDeserialization(request);
     }
@@ -311,7 +311,7 @@ public class StorageActions
     public async Task DeleteFileOrFolderAtPath(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Item's path relative to drive's root")] string itemPathRelativeToRoot)
     {
-        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($".//root:/{itemPathRelativeToRoot}", Method.Delete, 
             authenticationCredentialsProviders);
         await client.ExecuteWithHandlingWithoutDeserialization(request);

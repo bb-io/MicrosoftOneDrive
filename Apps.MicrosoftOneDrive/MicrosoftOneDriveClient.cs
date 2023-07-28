@@ -7,7 +7,7 @@ namespace Apps.MicrosoftOneDrive;
 
 public class MicrosoftOneDriveClient : RestClient
 {
-    public MicrosoftOneDriveClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) 
+    public MicrosoftOneDriveClient() 
         : base(new RestClientOptions
         {
             ThrowOnAnyError = false, BaseUrl = GetBaseUrl() 
