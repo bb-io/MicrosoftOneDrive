@@ -1,6 +1,5 @@
 ﻿using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Extensions;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using RestSharp;
 
 namespace Apps.MicrosoftOneDrive;
@@ -24,13 +23,7 @@ public class MicrosoftOneDriveClient : RestClient
         return SerializationExtensions.DeserializeResponseContent<T>(response.Content);
     }
     
-    public async Task<RestResponse> ExecuteWithHandlingWithoutDeserialization(RestRequest request)
-    {
-        var response = await ExecuteWithHandling(request);
-        return response;
-    }
-
-    private async Task<RestResponse> ExecuteWithHandling(RestRequest request)
+    public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
     {
         var response = await ExecuteAsync(request);
         
