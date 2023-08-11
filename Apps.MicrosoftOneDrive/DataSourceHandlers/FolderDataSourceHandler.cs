@@ -1,5 +1,4 @@
-﻿using Apps.MicrosoftOneDrive.Actions;
-using Apps.MicrosoftOneDrive.Dtos;
+﻿using Apps.MicrosoftOneDrive.Dtos;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -16,63 +15,53 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
     public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var folders = await GetFolders();
+        var client = new MicrosoftOneDriveClient();
+        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
+                       "$filter=fields/ContentType eq 'Folder'&$top=20";
         var foldersDictionary = new Dictionary<string, string>();
-        
-        foreach (var folder in folders)
+        var foldersAmount = 0;
+
+        do
         {
-            var folderPath = await GetFolderPath(folder);
+            var request = new MicrosoftOneDriveRequest(endpoint, Method.Get,
+                InvocationContext.AuthenticationCredentialsProviders);
+            request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
+            var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FolderMetadataDto>>>(request);
+            var filteredFolders = folders.Value
+                .Select(w => w.DriveItem)
+                .Select(i => new { i.Id, Path = GetFolderPath(i) })
+                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
-            if (!folderPath.Contains(context.SearchString ?? "", StringComparison.OrdinalIgnoreCase))
-                continue;
+            foreach (var file in filteredFolders)
+                foldersDictionary.Add(file.Id, file.Path);
             
-            if (folderPath.Length > 40)
+            foldersAmount += filteredFolders.Count();
+            endpoint = folders.ODataNextLink?.Split("me/drive")[1];
+        } while (foldersAmount < 20 && endpoint != null);
+        
+        foreach (var file in foldersDictionary)
+        {
+            var filePath = file.Value;
+            if (filePath.Length > 40)
             {
-                var folderPathParts = folderPath.Split("/");
-                if (folderPathParts.Length > 3)
-                    folderPath = string.Join("/", folderPathParts[0], "...", folderPathParts[^2], folderPathParts[^1]);
+                var filePathParts = filePath.Split("/");
+                if (filePathParts.Length > 3)
+                {
+                    filePath = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
+                    foldersDictionary[file.Key] = filePath;
+                }
             }
-            
-            foldersDictionary.Add(folder.Id, folderPath);
         }
 
         return foldersDictionary;
     }
 
-    private async Task<List<FolderMetadataDto>> GetFolders()
+    private string GetFolderPath(FolderMetadataDto folder)
     {
-        var client = new MicrosoftOneDriveClient();
-        var endpoint = "/root/search(q='.')";
-        var folders = new List<FolderMetadataDto>();
-        
-        do
-        {
-            var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-            var result = await client.ExecuteWithHandling<ListWrapper<FolderMetadataDto>>(request);
-            var currentFolders = result.Value.Where(item => item.ChildCount != null);
-            folders.AddRange(currentFolders);
-            endpoint = result.ODataNextLink?.Split("drive")[1];
-        } while (endpoint != null);
-
-        return folders;
-    }
-
-    private async Task<string> GetFolderPath(FolderMetadataDto folder)
-    {
-        var parentFolder = await new StorageActions().GetFolderMetadataById(
-            InvocationContext.AuthenticationCredentialsProviders,
-            folder.ParentReference.Id);
-        var parentFolderName = parentFolder.Name;
-
-        if (parentFolderName == "root")
+        var parentPath = folder.ParentReference.Path.Split("root:");
+        if (parentPath[1] == "")
             return folder.Name;
-        
-        var parentFolderParentPath = parentFolder.ParentReference.Path;
 
-        if (parentFolderParentPath == "/drive/root:")
-            return $"{parentFolderName}/{folder.Name}";
-
-        var parentPathRelativeToRoot = parentFolderParentPath.Split(":/")[1] + "/" + parentFolderName;
-        return $"{parentPathRelativeToRoot}/{folder.Name}";
+        return $"{parentPath[1].Substring(1)}/{folder.Name}";
     }
 }

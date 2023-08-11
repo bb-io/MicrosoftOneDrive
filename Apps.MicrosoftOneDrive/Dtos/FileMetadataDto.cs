@@ -13,30 +13,30 @@ public class FileMetadataDto
     public string Name { get; set; }
     
     [Display("Web URL")]
-    public string WebUrl { get; set; }
+    public string? WebUrl { get; set; }
     
     [Display("Size in bytes")]
-    public long Size { get; set; }
+    public long? Size { get; set; }
     
     [JsonProperty("file")]
     [JsonConverter(typeof(MimeTypeConverter))]
     [Display("Mime type")]
-    public string MimeType { get; set; }
+    public string? MimeType { get; set; }
     
     [JsonConverter(typeof(UserConverter))]
     [Display("Created by")]
-    public UserDto CreatedBy { get; set; }
+    public UserDto? CreatedBy { get; set; }
     
     [Display("Created date and time")]
-    public DateTime CreatedDateTime { get; set; }
+    public DateTime? CreatedDateTime { get; set; }
     
     [JsonConverter(typeof(UserConverter))]
     [Display("Last modified by")]
-    public UserDto LastModifiedBy { get; set; }
+    public UserDto? LastModifiedBy { get; set; }
     
     [Display("Last modified date and time")]
-    public DateTime LastModifiedDateTime { get; set; }
+    public DateTime? LastModifiedDateTime { get; set; }
     
     [Display("Parent reference")]
-    public ParentReferenceDto ParentReference { get; set; }
+    public ParentReferenceDto? ParentReference { get; set; }
 }
