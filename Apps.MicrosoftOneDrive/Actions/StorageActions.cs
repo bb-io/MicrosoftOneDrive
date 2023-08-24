@@ -1,4 +1,5 @@
-﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
+﻿using System.Net.Mime;
+using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Models.Requests;
 using Apps.MicrosoftOneDrive.Models.Responses;
@@ -7,6 +8,7 @@ using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using RestSharp;
+using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -64,12 +66,14 @@ public class StorageActions
         var fileBytes = response.RawBytes;
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
-        
-        return new DownloadFileResponse
+        var contentType = response.ContentType;
+
+        var file = new File(fileBytes)
         {
-            Filename = filename,
-            File = fileBytes
+            Name = filename,
+            ContentType = contentType
         };
+        return new DownloadFileResponse { File = file };
     }
 
     [Action("Upload file to folder", Description = "Upload a file to a parent folder. File must be up to 4MB in size.")]
@@ -79,16 +83,13 @@ public class StorageActions
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
-        if (input.File.Length > fourMegabytesInBytes)
+        if (input.File.Size > fourMegabytesInBytes)
             throw new ArgumentException("File too large. Size of the file must be under 4 MB.");
         
         var client = new MicrosoftOneDriveClient();
-        var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.Filename}:/content", 
+        var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content", 
             Method.Put, authenticationCredentialsProviders);
-        
-        if (!MimeTypes.TryGetMimeType(input.Filename, out var mimeType))
-            mimeType = "application/octet-stream";
-        request.AddParameter(mimeType, input.File, ParameterType.RequestBody);
+        request.AddParameter(input.File.ContentType, input.File.Bytes, ParameterType.RequestBody);
         
         var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
         return fileMetadata;

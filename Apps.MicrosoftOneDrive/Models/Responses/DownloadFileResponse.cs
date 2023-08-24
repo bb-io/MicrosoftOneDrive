@@ -1,7 +1,8 @@
-﻿namespace Apps.MicrosoftOneDrive.Models.Responses;
+﻿using File = Blackbird.Applications.Sdk.Common.Files.File;
+
+namespace Apps.MicrosoftOneDrive.Models.Responses;
 
 public class DownloadFileResponse
 {
-    public string Filename { get; set; }
-    public byte[] File { get; set; }
+    public File File { get; set; }
 }
