@@ -1,6 +1,6 @@
-﻿using System.Net.Mime;
-using Apps.MicrosoftOneDrive.DataSourceHandlers;
+﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Apps.MicrosoftOneDrive.Dtos;
+using Apps.MicrosoftOneDrive.Extensions;
 using Apps.MicrosoftOneDrive.Models.Requests;
 using Apps.MicrosoftOneDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
@@ -16,7 +16,7 @@ namespace Apps.MicrosoftOneDrive.Actions;
 public class StorageActions
 {
     #region File actions
-    
+
     [Action("Get file metadata", Description = "Retrieve the metadata for a file in a drive.")]
     public async Task<FileMetadataDto> GetFileMetadataById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -40,7 +40,7 @@ public class StorageActions
         var startDateTime = (DateTime.Now - TimeSpan.FromHours(hours ?? 24)).ToUniversalTime();
         var changedFiles = new List<FileMetadataDto>();
         int filesCount;
-        
+
         do
         {
             var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
@@ -53,7 +53,7 @@ public class StorageActions
 
         return new ListFilesResponse { Files = changedFiles };
     }
-    
+
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -62,7 +62,7 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
         var response = await client.ExecuteWithHandling(request);
-        
+
         var fileBytes = response.RawBytes;
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
@@ -76,22 +76,77 @@ public class StorageActions
         return new DownloadFileResponse { File = file };
     }
 
-    [Action("Upload file to folder", Description = "Upload a file to a parent folder. File must be up to 4MB in size.")]
+    [Action("Upload file to folder", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Parent folder")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
-        if (input.File.Size > fourMegabytesInBytes)
-            throw new ArgumentException("File too large. Size of the file must be under 4 MB.");
-        
         var client = new MicrosoftOneDriveClient();
-        var request = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content", 
-            Method.Put, authenticationCredentialsProviders);
-        request.AddParameter(input.File.ContentType, input.File.Bytes, ParameterType.RequestBody);
-        
-        var fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(request);
+        var fileSize = input.File.Bytes.Length;
+        var fileMetadata = new FileMetadataDto();
+
+        if (fileSize < fourMegabytesInBytes)
+        {
+            var uploadRequest = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
+                                                             $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
+                Method.Put, authenticationCredentialsProviders);
+            uploadRequest.AddParameter(input.File.ContentType, input.File.Bytes, ParameterType.RequestBody);
+            fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
+        }
+        else
+        {
+            const int chunkSize = 3932160;
+
+            var createUploadSessionRequest = new MicrosoftOneDriveRequest(
+                $".//items/{parentFolderId}:/{input.File.Name}:/createUploadSession", Method.Post,
+                authenticationCredentialsProviders);
+            createUploadSessionRequest.AddJsonBody($@"
+                {{
+                    ""deferCommit"": false,
+                    ""item"": {{
+                        ""@microsoft.graph.conflictBehavior"": ""{input.ConflictBehavior}"",
+                        ""name"": ""{input.File.Name}""
+                    }}
+                }}");
+
+            var resumableUploadResult = await client.ExecuteWithHandling<ResumableUploadDto>(createUploadSessionRequest);
+            var uploadUrl = new Uri(resumableUploadResult.UploadUrl);
+            var baseUrl = uploadUrl.GetLeftPart(UriPartial.Authority);
+            var endpoint = uploadUrl.PathAndQuery;
+            var uploadClient = new RestClient(new RestClientOptions { BaseUrl = new(baseUrl) });
+            
+            do
+            {
+                var startByte = int.Parse(resumableUploadResult.NextExpectedRanges.First().Split("-")[0]);
+                var buffer = input.File.Bytes.Skip(startByte).Take(chunkSize).ToArray();
+                var bufferSize = buffer.Length;
+                
+                var uploadRequest = new RestRequest(endpoint, Method.Put);
+                uploadRequest.AddParameter(input.File.ContentType, buffer, ParameterType.RequestBody);
+                uploadRequest.AddHeader("Content-Length", bufferSize);
+                uploadRequest.AddHeader("Content-Range", 
+                    $"bytes {startByte}-{startByte + bufferSize - 1}/{fileSize}");
+                
+                var uploadResponse = await uploadClient.ExecuteAsync(uploadRequest);
+                var responseContent = uploadResponse.Content;
+
+                if (!uploadResponse.IsSuccessful)
+                {
+                    var error = SerializationExtensions.DeserializeResponseContent<ErrorDto>(responseContent);
+                    throw new Exception($"{error.Error.Code}: {error.Error.Message}");
+                }
+                
+                resumableUploadResult =
+                    SerializationExtensions.DeserializeResponseContent<ResumableUploadDto>(responseContent);
+
+                if (resumableUploadResult.NextExpectedRanges == null)
+                    fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(responseContent);
+                
+            } while (resumableUploadResult.NextExpectedRanges != null);
+        }
+
         return fileMetadata;
     }
     
