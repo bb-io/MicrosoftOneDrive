@@ -47,12 +47,22 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                 var filePathParts = filePath.Split("/");
                 if (filePathParts.Length > 3)
                 {
-                    filePath = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
+                    filePath = string.Join("/", filePathParts[1], "...", filePathParts[^2], filePathParts[^1]);
                     foldersDictionary[file.Key] = filePath;
                 }
             }
         }
 
+        var rootName = "My files (root folder)";
+        if (string.IsNullOrWhiteSpace(context.SearchString) 
+            || rootName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
+        {
+            var request = new MicrosoftOneDriveRequest("/root", Method.Get,
+                InvocationContext.AuthenticationCredentialsProviders);
+            var rootFolder = await client.ExecuteWithHandling<FolderMetadataDto>(request);
+            foldersDictionary.Add(rootFolder.Id, rootName);
+        }
+            
         return foldersDictionary;
     }
 
