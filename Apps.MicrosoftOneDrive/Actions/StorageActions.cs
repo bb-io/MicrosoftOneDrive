@@ -1,4 +1,5 @@
-﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
+﻿using System.Net.Mime;
+using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Extensions;
 using Apps.MicrosoftOneDrive.Models.Requests;
@@ -66,7 +67,9 @@ public class StorageActions
         var fileBytes = response.RawBytes;
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
-        var contentType = response.ContentType;
+        var contentType = response.ContentType == MediaTypeNames.Text.Plain
+            ? MediaTypeNames.Text.RichText
+            : response.ContentType;
 
         var file = new File(fileBytes)
         {
@@ -85,6 +88,9 @@ public class StorageActions
         const int fourMegabytesInBytes = 4194304;
         var client = new MicrosoftOneDriveClient();
         var fileSize = input.File.Bytes.Length;
+        var contentType = Path.GetExtension(input.File.Name) == ".txt"
+            ? MediaTypeNames.Text.Plain
+            : input.File.ContentType;
         var fileMetadata = new FileMetadataDto();
 
         if (fileSize < fourMegabytesInBytes)
@@ -92,7 +98,7 @@ public class StorageActions
             var uploadRequest = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
                                                              $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
                 Method.Put, authenticationCredentialsProviders);
-            uploadRequest.AddParameter(input.File.ContentType, input.File.Bytes, ParameterType.RequestBody);
+            uploadRequest.AddParameter(contentType, input.File.Bytes, ParameterType.RequestBody);
             fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
         }
         else
@@ -124,7 +130,7 @@ public class StorageActions
                 var bufferSize = buffer.Length;
                 
                 var uploadRequest = new RestRequest(endpoint, Method.Put);
-                uploadRequest.AddParameter(input.File.ContentType, buffer, ParameterType.RequestBody);
+                uploadRequest.AddParameter(contentType, buffer, ParameterType.RequestBody);
                 uploadRequest.AddHeader("Content-Length", bufferSize);
                 uploadRequest.AddHeader("Content-Range", 
                     $"bytes {startByte}-{startByte + bufferSize - 1}/{fileSize}");
