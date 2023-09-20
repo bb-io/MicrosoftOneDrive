@@ -17,9 +17,11 @@ namespace Apps.MicrosoftOneDrive.Webhooks;
 [WebhookList]
 public class WebhookList: BaseInvocable
 {
+    private static readonly object LockObject = new();
+    
     private IEnumerable<AuthenticationCredentialsProvider> Creds =>
         InvocationContext.AuthenticationCredentialsProviders;
-        
+    
     public WebhookList(InvocationContext invocationContext) : base(invocationContext)
     {
     }
@@ -92,9 +94,12 @@ public class WebhookList: BaseInvocable
                                                                    && s.NotificationUrl == bridgeWebhooksUrl);
 
         var bridgeService = new BridgeService();
-        var storedDeltaToken = (await bridgeService.RetrieveValue(targetSubscription.Id)).Trim('"');
-
-        if (storedDeltaToken == oldDeltaToken)
-            await bridgeService.StoreValue(targetSubscription.Id, newDeltaToken);
+        
+        lock (LockObject)
+        {
+            var storedDeltaToken = bridgeService.RetrieveValue(targetSubscription.Id).Result.Trim('"');
+            if (storedDeltaToken == oldDeltaToken)
+                bridgeService.StoreValue(targetSubscription.Id, newDeltaToken).Wait();
+        }
     }
 }
