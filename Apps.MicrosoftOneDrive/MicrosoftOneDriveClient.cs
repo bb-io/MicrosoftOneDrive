@@ -20,7 +20,7 @@ public class MicrosoftOneDriveClient : RestClient
     public async Task<T> ExecuteWithHandling<T>(RestRequest request)
     {
         var response = await ExecuteWithHandling(request);
-        return SerializationExtensions.DeserializeResponseContent<T>(response.Content);
+        return response.Content.DeserializeResponseContent<T>();
     }
     
     public async Task<RestResponse> ExecuteWithHandling(RestRequest request)
@@ -35,7 +35,7 @@ public class MicrosoftOneDriveClient : RestClient
 
     private Exception ConfigureErrorException(string responseContent)
     {
-        var error = SerializationExtensions.DeserializeResponseContent<ErrorDto>(responseContent);
+        var error = responseContent.DeserializeResponseContent<ErrorDto>();
         return new($"{error.Error.Code}: {error.Error.Message}");
     }
 }
