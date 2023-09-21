@@ -5,7 +5,7 @@ namespace Apps.MicrosoftOneDrive.Dtos;
 public class ParentReferenceDto
 {
     [Display("Parent folder ID")]
-    public string Id { get; set; }
+    public string? Id { get; set; }
     
     [Display("Parent folder path")]
     public string? Path { get; set; }
@@ -17,5 +17,5 @@ public class ParentReferenceDto
     public string DriveId { get; set; }
 
     [Display("Site ID")]
-    public string SiteId { get; set; }
+    public string? SiteId { get; set; }
 }

@@ -33,8 +33,9 @@ public class WebhookList: BaseInvocable
     {
         var payload = DeserializePayload(request);
         var changedFiles = GetChangedItems<FileMetadataDto>(payload.DeltaToken, out var newDeltaToken)
-            .Where(item => item.MimeType != null 
-                           && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId));
+            .Where(item => item.MimeType != null
+                           && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
+            .ToList();
         
         if (!changedFiles.Any())
             return new WebhookResponse<ListFilesResponse>
@@ -48,6 +49,33 @@ public class WebhookList: BaseInvocable
         {
             HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
             Result = new ListFilesResponse { Files = changedFiles }
+        };
+    }
+    
+    [Webhook("On folders updated or created", typeof(WebhookHandler), 
+        Description = "This webhook is triggered when folders are updated or created.")]
+    public async Task<WebhookResponse<ListFoldersResponse>> OnFoldersUpdatedOrCreated(WebhookRequest request, 
+        [WebhookParameter] FolderInput folder)
+    {
+        var payload = DeserializePayload(request);
+        var changedFolders = GetChangedItems<FolderMetadataDto>(payload.DeltaToken, out var newDeltaToken)
+            .Where(item => item.ChildCount != null 
+                           && item.ParentReference!.Id != null  
+                           && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
+            .ToList();
+        
+        if (!changedFolders.Any())
+            return new WebhookResponse<ListFoldersResponse>
+            {
+                HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+                ReceivedWebhookRequestType = WebhookRequestType.Preflight
+            };
+
+        await StoreDeltaToken(payload.DeltaToken, newDeltaToken);
+        return new WebhookResponse<ListFoldersResponse>
+        {
+            HttpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK),
+            Result = new ListFoldersResponse { Folders = changedFolders }
         };
     }
 
