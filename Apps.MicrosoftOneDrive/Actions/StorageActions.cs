@@ -228,6 +228,5 @@ public class StorageActions
         var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Delete, authenticationCredentialsProviders); 
         await client.ExecuteWithHandling(request);
     }
-
     #endregion
 }
