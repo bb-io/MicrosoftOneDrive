@@ -25,6 +25,6 @@ public class OAuth2AuthorizeService : BaseInvocable, IOAuth2AuthorizeService
             { "authorization_url", oauthUrl},
             { "actual_redirect_uri", InvocationContext.UriInfo.AuthorizationCodeRedirectUri.ToString() },
         };
-        return QueryHelpers.AddQueryString(oauthUrl, parameters);
+        return QueryHelpers.AddQueryString(bridgeOauthUrl, parameters);
     }
 }
