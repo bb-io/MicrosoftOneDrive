@@ -4,10 +4,14 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+		<Product>Microsoft OneDrive</Product>
+		<Version>1.0.0</Version>
+		<Description>Cloud-based storage and file synchronization service that allows to store, access, and share files and documents</Description>
+		<AssemblyName>Apps.MicrosoftOneDrive</AssemblyName>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha3" />
+      <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha4" />
       <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
       <PackageReference Include="MimeTypes" Version="2.4.1">
         <PrivateAssets>all</PrivateAssets>
@@ -16,5 +20,7 @@
       <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
       <PackageReference Include="RestSharp" Version="110.2.0" />
     </ItemGroup>
-
+	<ItemGroup>
+		<EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"></EmbeddedResource>
+	</ItemGroup>
 </Project>
