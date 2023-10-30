@@ -1,13 +1,19 @@
 ﻿using System.Text.Json;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.MicrosoftOneDrive.Auth.OAuth2;
 
-public class OAuth2TokenService : IOAuth2TokenService
+public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService
 { 
     private const string TokenUrl = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
     private const string ExpiresAtKeyName = "expires_at";
-    
+
+    public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext)
+    {
+    }
+
     public bool IsRefreshToken(Dictionary<string, string> values) 
         => values.TryGetValue(ExpiresAtKeyName, out var expireValue) && DateTime.UtcNow > DateTime.Parse(expireValue);
     
@@ -35,7 +41,7 @@ public class OAuth2TokenService : IOAuth2TokenService
             { "grant_type", grantType },
             { "client_id", ApplicationConstants.ClientId }, 
             { "client_secret", ApplicationConstants.ClientSecret },
-            { "redirect_uri", ApplicationConstants.RedirectUri }
+            { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" }
         };
         return await RequestToken(bodyParameters, cancellationToken);
     }

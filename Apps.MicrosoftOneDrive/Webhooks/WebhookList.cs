@@ -112,7 +112,7 @@ public class WebhookList: BaseInvocable
     private async Task StoreDeltaToken(string oldDeltaToken, string newDeltaToken)
     {
         const string resource = "/me/drive/root";
-        const string bridgeWebhooksUrl = ApplicationConstants.BridgeServiceUrl + $"/webhooks/{ApplicationConstants.AppName}";
+        string bridgeWebhooksUrl = InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/') + $"/webhooks/{ApplicationConstants.AppName}";
         
         var oneDriveClient = new RestClient(new RestClientOptions("https://graph.microsoft.com/v1.0"));
         var subscriptionsRequest = new MicrosoftOneDriveRequest("/subscriptions", Method.Get, Creds);
@@ -121,7 +121,7 @@ public class WebhookList: BaseInvocable
         var targetSubscription = subscriptions.Single(s => s.Resource == resource
                                                                    && s.NotificationUrl == bridgeWebhooksUrl);
 
-        var bridgeService = new BridgeService();
+        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         
         lock (LockObject)
         {

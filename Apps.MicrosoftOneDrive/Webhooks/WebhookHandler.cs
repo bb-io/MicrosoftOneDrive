@@ -9,18 +9,23 @@ using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.Webhooks;
 
-public class WebhookHandler : IWebhookEventHandler, IAsyncRenewableWebhookEventHandler
+public class WebhookHandler : BaseInvocable, IWebhookEventHandler, IAsyncRenewableWebhookEventHandler
 {
     private const string SubscriptionEvent = "updated"; // the only event type supported for drive items
     const string Resource = "/me/drive/root";
-    const string BridgeWebhooksUrl = ApplicationConstants.BridgeServiceUrl + $"/webhooks/{ApplicationConstants.AppName}";
+    private string BridgeWebhooksUrl = "";
+
+    public WebhookHandler(InvocationContext invocationContext) : base(invocationContext)
+    {
+        BridgeWebhooksUrl = InvocationContext.UriInfo.BridgeServiceUrl.ToString() + $"/webhooks/{ApplicationConstants.AppName}"; ;
+    }
 
     public async Task SubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         Dictionary<string, string> values)
     {
         var oneDriveClient = new RestClient(new RestClientOptions("https://graph.microsoft.com/v1.0"));
         var targetSubscription = await GetTargetSubscription(authenticationCredentialsProviders, oneDriveClient);
-        var bridgeService = new BridgeService();
+        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         string subscriptionId;
         
         if (targetSubscription is null)
@@ -68,7 +73,7 @@ public class WebhookHandler : IWebhookEventHandler, IAsyncRenewableWebhookEventH
         var targetSubscription = await GetTargetSubscription(authenticationCredentialsProviders, oneDriveClient);
         var subscriptionId = targetSubscription.Id;
         
-        var bridgeService = new BridgeService();
+        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         var webhooksLeft = await bridgeService.Unsubscribe(values["payloadUrl"], subscriptionId, SubscriptionEvent);
 
         if (webhooksLeft == 0)
