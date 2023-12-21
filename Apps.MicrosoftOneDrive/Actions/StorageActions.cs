@@ -8,14 +8,23 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using RestSharp;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
 [ActionList]
 public class StorageActions
 {
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public StorageActions(IFileManagementClient fileManagementClient)
+    {
+        _fileManagementClient = fileManagementClient;
+    }
+    
     #region File actions
 
     [Action("Get file metadata", Description = "Retrieve the metadata for a file in a drive.")]
@@ -63,19 +72,19 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
         var response = await client.ExecuteWithHandling(request);
-
-        var fileBytes = response.RawBytes;
+        
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
         var filename = filenameHeader.Value.ToString().Split('"')[1];
         var contentType = response.ContentType == MediaTypeNames.Text.Plain
             ? MediaTypeNames.Text.RichText
             : response.ContentType;
 
-        var file = new File(fileBytes)
+        FileReference file;
+        using(var stream = new MemoryStream(response.RawBytes))
         {
-            Name = filename,
-            ContentType = contentType
-        };
+            file = await _fileManagementClient.UploadAsync(stream, contentType, filename);
+        }
+        
         return new DownloadFileResponse { File = file };
     }
 
@@ -87,7 +96,10 @@ public class StorageActions
     {
         const int fourMegabytesInBytes = 4194304;
         var client = new MicrosoftOneDriveClient();
-        var fileSize = input.File.Bytes.Length;
+
+        var file = await _fileManagementClient.DownloadAsync(input.File);
+        var fileBytes = await file.GetByteData();
+        var fileSize = fileBytes.Length;
         var contentType = Path.GetExtension(input.File.Name) == ".txt"
             ? MediaTypeNames.Text.Plain
             : input.File.ContentType;
@@ -98,7 +110,7 @@ public class StorageActions
             var uploadRequest = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
                                                              $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
                 Method.Put, authenticationCredentialsProviders);
-            uploadRequest.AddParameter(contentType, input.File.Bytes, ParameterType.RequestBody);
+            uploadRequest.AddParameter(contentType, fileBytes, ParameterType.RequestBody);
             fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
         }
         else
@@ -126,7 +138,7 @@ public class StorageActions
             do
             {
                 var startByte = int.Parse(resumableUploadResult.NextExpectedRanges.First().Split("-")[0]);
-                var buffer = input.File.Bytes.Skip(startByte).Take(chunkSize).ToArray();
+                var buffer = fileBytes.Skip(startByte).Take(chunkSize).ToArray();
                 var bufferSize = buffer.Length;
                 
                 var uploadRequest = new RestRequest(endpoint, Method.Put);
