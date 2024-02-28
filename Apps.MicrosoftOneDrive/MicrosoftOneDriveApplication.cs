@@ -9,6 +9,8 @@ public class MicrosoftOneDriveApplication : BaseInvocable, IApplication
 {
     private readonly Dictionary<Type, object> _typesInstances;
 
+    public IPublicApplicationMetadata? PublicApplicationMetadata { get; }
+
     public MicrosoftOneDriveApplication(InvocationContext invocationContext) : base(invocationContext)
     {
         _typesInstances = CreateTypesInstances();
@@ -26,9 +28,10 @@ public class MicrosoftOneDriveApplication : BaseInvocable, IApplication
         {
             throw new InvalidOperationException($"Instance of type '{typeof(T)}' not found");
         }
+
         return (T)value;
     }
-    
+
     private Dictionary<Type, object> CreateTypesInstances()
     {
         return new Dictionary<Type, object>
