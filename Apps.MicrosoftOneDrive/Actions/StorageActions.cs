@@ -98,7 +98,11 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient();
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
-        var fileSize = file.Length;
+    
+        var fileStream = new MemoryStream();
+        await file.CopyToAsync(fileStream);
+        
+        var fileSize = fileStream.Length;
         var contentType = Path.GetExtension(input.File.Name) == ".txt"
             ? MediaTypeNames.Text.Plain
             : input.File.ContentType;
@@ -110,7 +114,7 @@ public class StorageActions
                                                              $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
                 Method.Put, authenticationCredentialsProviders);
 
-            uploadRequest.AddFile(contentType, () => file, input.File.Name);
+            uploadRequest.AddFile(contentType, () => fileStream, input.File.Name);
             fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
         }
         else
