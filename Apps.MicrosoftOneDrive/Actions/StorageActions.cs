@@ -98,8 +98,7 @@ public class StorageActions
         var client = new MicrosoftOneDriveClient();
 
         var file = await _fileManagementClient.DownloadAsync(input.File);
-        var fileBytes = await file.GetByteData();
-        var fileSize = fileBytes.Length;
+        var fileSize = file.Length;
         var contentType = Path.GetExtension(input.File.Name) == ".txt"
             ? MediaTypeNames.Text.Plain
             : input.File.ContentType;
@@ -110,7 +109,8 @@ public class StorageActions
             var uploadRequest = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
                                                              $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
                 Method.Put, authenticationCredentialsProviders);
-            uploadRequest.AddParameter(contentType, fileBytes, ParameterType.RequestBody);
+
+            uploadRequest.AddFile(contentType, () => file, input.File.Name);
             fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
         }
         else
@@ -134,7 +134,8 @@ public class StorageActions
             var baseUrl = uploadUrl.GetLeftPart(UriPartial.Authority);
             var endpoint = uploadUrl.PathAndQuery;
             var uploadClient = new RestClient(new RestClientOptions { BaseUrl = new(baseUrl) });
-            
+
+            var fileBytes = await file.GetByteData();
             do
             {
                 var startByte = int.Parse(resumableUploadResult.NextExpectedRanges.First().Split("-")[0]);
