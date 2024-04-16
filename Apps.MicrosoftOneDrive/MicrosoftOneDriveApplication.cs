@@ -2,13 +2,20 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Common.Metadata;
 
 namespace Apps.MicrosoftOneDrive;
 
-public class MicrosoftOneDriveApplication : BaseInvocable, IApplication
+public class MicrosoftOneDriveApplication : BaseInvocable, IApplication, ICategoryProvider
 {
     private readonly Dictionary<Type, object> _typesInstances;
 
+    public IEnumerable<ApplicationCategory> Categories
+    {
+        get => [ApplicationCategory.FileManagementAndStorage];
+        set { }
+    }
+    
     public MicrosoftOneDriveApplication(InvocationContext invocationContext) : base(invocationContext)
     {
         _typesInstances = CreateTypesInstances();
@@ -26,9 +33,10 @@ public class MicrosoftOneDriveApplication : BaseInvocable, IApplication
         {
             throw new InvalidOperationException($"Instance of type '{typeof(T)}' not found");
         }
+
         return (T)value;
     }
-    
+
     private Dictionary<Type, object> CreateTypesInstances()
     {
         return new Dictionary<Type, object>
