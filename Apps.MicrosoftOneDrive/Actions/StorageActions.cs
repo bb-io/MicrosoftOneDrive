@@ -101,7 +101,8 @@ public class StorageActions
     
         var fileStream = new MemoryStream();
         await file.CopyToAsync(fileStream);
-        
+        fileStream.Position = 0;
+
         var fileSize = fileStream.Length;
         var contentType = Path.GetExtension(input.File.Name) == ".txt"
             ? MediaTypeNames.Text.Plain
