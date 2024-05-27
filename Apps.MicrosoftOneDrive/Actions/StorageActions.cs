@@ -140,7 +140,7 @@ public class StorageActions
             var endpoint = uploadUrl.PathAndQuery;
             var uploadClient = new RestClient(new RestClientOptions { BaseUrl = new(baseUrl) });
 
-            var fileBytes = await file.GetByteData();
+            var fileBytes = await fileStream.GetByteData();
             do
             {
                 var startByte = int.Parse(resumableUploadResult.NextExpectedRanges.First().Split("-")[0]);
