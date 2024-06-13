@@ -22,7 +22,7 @@ namespace Apps.MicrosoftOneDrive.Webhooks
             PollingEventRequest<DeltaTokenMemory> request,
             [PollingEventParameter] FolderInput folder)
         {
-            if(request.Memory != null)
+            if(request.Memory == null)
             {
                 GetChangedItems<FileMetadataDto>(null, out var firstDeltaToken);
                 return new()
@@ -56,7 +56,7 @@ namespace Apps.MicrosoftOneDrive.Webhooks
             PollingEventRequest<DeltaTokenMemory> request,
             [PollingEventParameter] FolderInput folder)
         {
-            if (request.Memory != null)
+            if (request.Memory == null)
             {
                 GetChangedItems<FolderMetadataDto>(null, out var firstDeltaToken);
                 return new()
