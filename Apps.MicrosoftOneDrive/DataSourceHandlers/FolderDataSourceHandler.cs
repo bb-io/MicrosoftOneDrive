@@ -16,8 +16,7 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftOneDriveClient();
-        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
-                       "$filter=fields/ContentType eq 'Folder'&$top=20";
+        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,folder)&$top=20";
         var foldersDictionary = new Dictionary<string, string>();
         var foldersAmount = 0;
 
@@ -29,26 +28,27 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FolderMetadataDto>>>(request);
             var filteredFolders = folders.Value
                 .Select(w => w.DriveItem)
+                .Where(i => i.ChildCount != null)
                 .Select(i => new { i.Id, Path = GetFolderPath(i) })
                 .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
-            foreach (var file in filteredFolders)
-                foldersDictionary.Add(file.Id, file.Path);
+            foreach (var folder in filteredFolders)
+                foldersDictionary.Add(folder.Id, folder.Path);
             
             foldersAmount += filteredFolders.Count();
             endpoint = folders.ODataNextLink?.Split("me/drive")[1];
         } while (foldersAmount < 20 && endpoint != null);
         
-        foreach (var file in foldersDictionary)
+        foreach (var folder in foldersDictionary)
         {
-            var filePath = file.Value;
-            if (filePath.Length > 40)
+            var folderPath = folder.Value;
+            if (folderPath.Length > 40)
             {
-                var filePathParts = filePath.Split("/");
-                if (filePathParts.Length > 3)
+                var folderPathParts = folderPath.Split("/");
+                if (folderPathParts.Length > 3)
                 {
-                    filePath = string.Join("/", filePathParts[1], "...", filePathParts[^2], filePathParts[^1]);
-                    foldersDictionary[file.Key] = filePath;
+                    folderPath = string.Join("/", folderPathParts[1], "...", folderPathParts[^2], folderPathParts[^1]);
+                    foldersDictionary[folder.Key] = folderPath;
                 }
             }
         }

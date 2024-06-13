@@ -16,8 +16,7 @@ public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftOneDriveClient();
-        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference)&" +
-                       "$filter=fields/ContentType eq 'Document'&$top=20";
+        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,file)&$top=20";
         var filesDictionary = new Dictionary<string, string>();
         var filesAmount = 0;
 
@@ -29,6 +28,7 @@ public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var files = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
+                .Where(i => i.MimeType != null)
                 .Select(i => new { i.Id, Path = GetFilePath(i) })
                 .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase) && Path.GetExtension(i.Path).Contains("xls"));
             
