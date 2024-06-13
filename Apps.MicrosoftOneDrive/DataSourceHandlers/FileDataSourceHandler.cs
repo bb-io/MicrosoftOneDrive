@@ -30,7 +30,7 @@ public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
                 .Select(i => new { i.Id, Path = GetFilePath(i) })
-                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
+                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase) && Path.GetExtension(i.Path).Contains("xls"));
             
             foreach (var file in filteredFiles)
                 filesDictionary.Add(file.Id, file.Path);
