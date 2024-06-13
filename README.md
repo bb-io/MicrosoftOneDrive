@@ -19,23 +19,23 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 
 ### Storage
 
-- **Upload file to folder** Upload file for current user
-- **Download file**
-- **List files in folder** 
-- **List changed files** 
-- **Get folder metadata**
-- **Get file metadata**
-- **Create folder in parent folder**
-- **Delete folder**
-- **Delete file**
+- **Upload file to folder** Upload file to specified folder
+- **Download file** Download specified file
+- **List files in folder** List files metadata in specified folder
+- **List changed files** List changed files within specified amount of last hours
+- **Get folder metadata** Get information about specific folder
+- **Get file metadata** Get information about specific file
+- **Create folder in parent folder** Create new folder in another folder
+- **Delete folder** Delete specified folder
+- **Delete file** Delete specified file
 
 ## Polling events
 
 - **On files created or updated** This polling event is triggered when files are created or updated.
-- **On files deleted** This polling event is triggered when file(s) are deleted.
+- **On folders created or updated** This polling event is triggered when folders are created or updated.
 ## Examples
 ![Connecting](image/README/example_bird.png)<br>
-This bird fetches new or updated files from Dropbox, translates them with DeepL and then sends them to Slack channel
+This bird fetches new or updated files from OneDrive, translates them with DeepL and then sends them to Slack channel
 
 ## Feedback
 
