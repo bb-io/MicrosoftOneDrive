@@ -115,7 +115,7 @@ public class StorageActions
                                                              $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
                 Method.Put, authenticationCredentialsProviders);
 
-            uploadRequest.AddFile(contentType, () => fileStream, input.File.Name);
+            uploadRequest.AddParameter("application/octet-stream", await fileStream.GetByteData(), ParameterType.RequestBody);
             fileMetadata = await client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
         }
         else
