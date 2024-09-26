@@ -59,14 +59,6 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
         }
         
         var changedFiles = filteredChangedFiles.ToList();
-            
-        await WebhookLogger.LogAsync(new
-        {
-            changedFiles,
-            changedItems = changedItems.ToList(),
-            request.Memory.DeltaToken,
-        });
-
         if (changedFiles.Count == 0)
         {
             return new()
