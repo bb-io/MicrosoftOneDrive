@@ -31,9 +31,11 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 
 ## Polling events
 
-- **On files created or updated** This polling event is triggered when files are created or updated.
+- **On files created or updated** This polling event is triggered when files are created or updated. You can specify the folder to watch for changes and `Include subfolders` option to include changes in subfolders (by default it is set to `false`).
 - **On folders created or updated** This polling event is triggered when folders are created or updated.
+
 ## Examples
+
 ![Connecting](image/README/example_bird.png)<br>
 This bird fetches new or updated files from OneDrive, translates them with DeepL and then sends them to Slack channel
 
