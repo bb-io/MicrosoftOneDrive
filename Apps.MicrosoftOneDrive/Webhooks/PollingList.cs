@@ -11,12 +11,8 @@ using RestSharp;
 namespace Apps.MicrosoftOneDrive.Webhooks
 {
     [PollingEventList]
-    public class PollingList : BaseInvocable
+    public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
     {
-        public PollingList(InvocationContext invocationContext) : base(invocationContext)
-        {
-        }
-
         [PollingEvent("On files created or updated", "On files created or updated")]
         public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
             PollingEventRequest<DeltaTokenMemory> request,
@@ -35,13 +31,21 @@ namespace Apps.MicrosoftOneDrive.Webhooks
             var changedFiles = GetChangedItems<FileMetadataDto>(request.Memory.DeltaToken, out var newDeltaToken)
                 .Where(item => item.MimeType != null && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
                 .ToList();
+            
+            await WebhookLogger.LogAsync(new
+            {
+                changedFiles,
+                request.Memory.DeltaToken,
+            });
 
-            if(changedFiles.Count == 0)
+            if (changedFiles.Count == 0)
+            {
                 return new()
                 {
                     FlyBird = false,
                     Memory = new() { DeltaToken = newDeltaToken }
                 };
+            }
 
             return new()
             {
