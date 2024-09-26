@@ -12,7 +12,7 @@ public class FolderMetadataDto
     [Display("Folder name")]
     public string Name { get; set; }
     
-    [Display("Web url")]
+    [Display("Web URL")]
     public string? WebUrl { get; set; }
     
     [Display("Size in bytes")]

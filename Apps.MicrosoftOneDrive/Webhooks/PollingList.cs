@@ -8,106 +8,142 @@ using Blackbird.Applications.Sdk.Common.Polling;
 using Microsoft.AspNetCore.WebUtilities;
 using RestSharp;
 
-namespace Apps.MicrosoftOneDrive.Webhooks
+namespace Apps.MicrosoftOneDrive.Webhooks;
+
+[PollingEventList]
+public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    [PollingEventList]
-    public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
+    [PollingEvent("On files created or updated", "On files created or updated")]
+    public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
+        PollingEventRequest<DeltaTokenMemory> request,
+        [PollingEventParameter] FolderInput folder,
+        [PollingEventParameter] IncludeSubfoldersInput includeSubfolders)
     {
-        [PollingEvent("On files created or updated", "On files created or updated")]
-        public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
-            PollingEventRequest<DeltaTokenMemory> request,
-            [PollingEventParameter] FolderInput folder)
+        if(request.Memory == null)
         {
-            if(request.Memory == null)
+            GetChangedItems<FileMetadataDto>(null, out var firstDeltaToken);
+            return new()
             {
-                GetChangedItems<FileMetadataDto>(null, out var firstDeltaToken);
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new() { DeltaToken = firstDeltaToken }
-                };
-            }
+                FlyBird = false,
+                Memory = new() { DeltaToken = firstDeltaToken }
+            };
+        }
 
-            var changedFiles = GetChangedItems<FileMetadataDto>(request.Memory.DeltaToken, out var newDeltaToken)
-                .Where(item => item.MimeType != null && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
-                .ToList();
+        var changedItems = GetChangedItems<FileMetadataDto>(request.Memory.DeltaToken, out var newDeltaToken);
+        
+        IEnumerable<FileMetadataDto> filteredChangedFiles;
+        if (includeSubfolders?.IncludeSubfolders == true && !string.IsNullOrEmpty(folder.ParentFolderId))
+        {
+            var folderMetadata = await GetFolderMetadataById(folder.ParentFolderId);
+            if (folderMetadata?.ParentReference?.Path == null || string.IsNullOrEmpty(folderMetadata.Name))
+            {
+                filteredChangedFiles = Enumerable.Empty<FileMetadataDto>();
+            }
+            else
+            {
+                var parentPath = folderMetadata.ParentReference.Path.TrimEnd('/');
+                var folderPath = $"{parentPath}/{folderMetadata.Name}";
+
+                filteredChangedFiles = changedItems
+                    .Where(item => item.MimeType != null
+                                   && item.ParentReference?.Path != null
+                                   && item.ParentReference.Path.StartsWith(folderPath, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+        else
+        {
+            filteredChangedFiles = changedItems
+                .Where(item => item.MimeType != null 
+                               && (string.IsNullOrEmpty(folder.ParentFolderId) 
+                                   || item.ParentReference.Id.Equals(folder.ParentFolderId, StringComparison.OrdinalIgnoreCase)));
+        }
+        
+        var changedFiles = filteredChangedFiles.ToList();
             
-            await WebhookLogger.LogAsync(new
-            {
-                changedFiles,
-                request.Memory.DeltaToken,
-            });
+        await WebhookLogger.LogAsync(new
+        {
+            changedFiles,
+            changedItems = changedItems.ToList(),
+            request.Memory.DeltaToken,
+        });
 
-            if (changedFiles.Count == 0)
-            {
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new() { DeltaToken = newDeltaToken }
-                };
-            }
-
+        if (changedFiles.Count == 0)
+        {
             return new()
             {
-                FlyBird = true,
-                Memory = new() { DeltaToken = newDeltaToken },
-                Result = new() { Files = changedFiles }
+                FlyBird = false,
+                Memory = new() { DeltaToken = newDeltaToken }
             };
         }
 
-        [PollingEvent("On folders created or updated", "On folders created or updated")]
-        public async Task<PollingEventResponse<DeltaTokenMemory, ListFoldersResponse>> OnFoldersCreatedOrUpdated(
-            PollingEventRequest<DeltaTokenMemory> request,
-            [PollingEventParameter] FolderInput folder)
+        return new()
         {
-            if (request.Memory == null)
-            {
-                GetChangedItems<FolderMetadataDto>(null, out var firstDeltaToken);
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new() { DeltaToken = firstDeltaToken }
-                };
-            }
+            FlyBird = true,
+            Memory = new() { DeltaToken = newDeltaToken },
+            Result = new() { Files = changedFiles }
+        };
+    }
 
-            var changedFolders = GetChangedItems<FolderMetadataDto>(request.Memory.DeltaToken, out var newDeltaToken)
-                .Where(item => item.ChildCount != null && item.ParentReference!.Id != null && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
-                .ToList();
-
-            if (changedFolders.Count == 0)
-                return new()
-                {
-                    FlyBird = false,
-                    Memory = new() { DeltaToken = newDeltaToken }
-                };
-
+    [PollingEvent("On folders created or updated", "On folders created or updated")]
+    public async Task<PollingEventResponse<DeltaTokenMemory, ListFoldersResponse>> OnFoldersCreatedOrUpdated(
+        PollingEventRequest<DeltaTokenMemory> request,
+        [PollingEventParameter] FolderInput folder)
+    {
+        if (request.Memory == null)
+        {
+            GetChangedItems<FolderMetadataDto>(null, out var firstDeltaToken);
             return new()
             {
-                FlyBird = true,
-                Memory = new() { DeltaToken = newDeltaToken },
-                Result = new() { Folders = changedFolders }
+                FlyBird = false,
+                Memory = new() { DeltaToken = firstDeltaToken }
             };
         }
 
-        private List<T> GetChangedItems<T>(string deltaToken, out string newDeltaToken)
+        var changedFolders = GetChangedItems<FolderMetadataDto>(request.Memory.DeltaToken, out var newDeltaToken)
+            .Where(item => item.ChildCount != null && item.ParentReference!.Id != null && (folder.ParentFolderId == null || item.ParentReference.Id == folder.ParentFolderId))
+            .ToList();
+
+        if (changedFolders.Count == 0)
+            return new()
+            {
+                FlyBird = false,
+                Memory = new() { DeltaToken = newDeltaToken }
+            };
+
+        return new()
         {
-            var deltaTokenQueryParameter = string.IsNullOrEmpty(deltaToken) ? string.Empty : $"?token={deltaToken}";
-            var client = new MicrosoftOneDriveClient();
-            var items = new List<T>();
-            var request = new MicrosoftOneDriveRequest($"/root/delta{deltaTokenQueryParameter}", Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-            var result = client.ExecuteWithHandling<ListWrapper<T>>(request).Result;
+            FlyBird = true,
+            Memory = new() { DeltaToken = newDeltaToken },
+            Result = new() { Folders = changedFolders }
+        };
+    }
+    
+    private async Task<FolderMetadataDto> GetFolderMetadataById(string folderId)
+    {
+        var client = new MicrosoftOneDriveClient();
+        var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var folderMetadata = await client.ExecuteWithHandling<FolderMetadataDto>(request);
+        return folderMetadata;
+    }
+
+    private List<T> GetChangedItems<T>(string deltaToken, out string newDeltaToken)
+    {
+        var deltaTokenQueryParameter = string.IsNullOrEmpty(deltaToken) ? string.Empty : $"?token={deltaToken}";
+        var client = new MicrosoftOneDriveClient();
+        var items = new List<T>();
+        var request = new MicrosoftOneDriveRequest($"/root/delta{deltaTokenQueryParameter}", Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+        var result = client.ExecuteWithHandling<ListWrapper<T>>(request).Result;
+        items.AddRange(result.Value);
+
+        while (result.ODataNextLink != null)
+        {
+            var endpoint = result.ODataNextLink?.Split("drive")[1];
+            request = new MicrosoftOneDriveRequest(endpoint, Method.Get, InvocationContext.AuthenticationCredentialsProviders);
+            result = client.ExecuteWithHandling<ListWrapper<T>>(request).Result;
             items.AddRange(result.Value);
-
-            while (result.ODataNextLink != null)
-            {
-                var endpoint = result.ODataNextLink?.Split("drive")[1];
-                request = new MicrosoftOneDriveRequest(endpoint, Method.Get, InvocationContext.AuthenticationCredentialsProviders);
-                result = client.ExecuteWithHandling<ListWrapper<T>>(request).Result;
-                items.AddRange(result.Value);
-            }
-
-            newDeltaToken = QueryHelpers.ParseQuery(result.ODataDeltaLink!.Split("?")[1])["token"];
-            return items;
         }
+
+        newDeltaToken = QueryHelpers.ParseQuery(result.ODataDeltaLink!.Split("?")[1])["token"];
+        return items;
     }
 }
