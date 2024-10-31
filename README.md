@@ -29,6 +29,11 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 - **Delete folder** Delete specified folder
 - **Delete file** Delete specified file
 
+> When uploading a file to a folder, you can choose from the following options how to behave in case of conflict (there is already a file with the same name in the specified folder):
+**Fail Uploading**: If a file with the same name exists, the upload will stop, preserving the original file.
+**Replace File**: The existing file will be overwritten by the new upload, replacing its contents.
+**Rename File**: The new file will be saved with a unique name, preserving both the original and the uploaded files.
+
 ## Polling events
 
 - **On files created or updated** This polling event is triggered when files are created or updated. You can specify the folder to watch for changes and `Include subfolders` option to include changes in subfolders (by default it is set to `false`).
