@@ -91,7 +91,7 @@ public class StorageActions
     [Action("Upload file to folder", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("Parent folder")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
+        [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
