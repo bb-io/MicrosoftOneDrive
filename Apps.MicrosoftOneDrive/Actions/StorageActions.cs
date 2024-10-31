@@ -30,7 +30,7 @@ public class StorageActions
     [Action("Get file metadata", Description = "Retrieve the metadata for a file in a drive.")]
     public async Task<FileMetadataDto> GetFileMetadataById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("File")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+        [ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
     {
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Get, authenticationCredentialsProviders);
@@ -67,7 +67,7 @@ public class StorageActions
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("File")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+        [ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
     {
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
@@ -176,7 +176,7 @@ public class StorageActions
     
     [Action("Delete file", Description = "Delete file in a drive.")]
     public async Task DeleteFileId(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("File")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+        [ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
     {
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{fileId}", Method.Delete, authenticationCredentialsProviders); 
