@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Microsoft OneDrive</Product>
-    <Version>1.1.4</Version>
+    <Version>1.2.0</Version>
     <Description>Cloud-based storage and file synchronization service that allows to store, access, and share files and documents</Description>
     <AssemblyName>Apps.MicrosoftOneDrive</AssemblyName>
   </PropertyGroup>
