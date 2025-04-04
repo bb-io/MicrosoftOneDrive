@@ -4,12 +4,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Product>Microsoft OneDrive</Product>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Description>Cloud-based storage and file synchronization service that allows to store, access, and share files and documents</Description>
     <AssemblyName>Apps.MicrosoftOneDrive</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.8.0" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.12.0" />
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.1" />
     <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.13" />
     <PackageReference Include="MimeTypes" Version="2.4.1">

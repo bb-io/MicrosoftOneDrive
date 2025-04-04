@@ -1,22 +1,19 @@
 ﻿using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
-public class ConflictBehaviorDataSourceHandler : BaseInvocable, IDataSourceHandler
+public class ConflictBehaviorDataSourceHandler : IStaticDataSourceItemHandler
 {
-    public ConflictBehaviorDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
+    public IEnumerable<DataSourceItem> GetData()
     {
-    }
-
-    public Dictionary<string, string> GetData(DataSourceContext context)
-    {
-        var conflictBehaviors = new Dictionary<string, string>
+        var conflictBehaviors = new List<DataSourceItem>()
         {
-            { "fail", "Fail uploading" },
-            { "replace", "Replace file" },
-            { "rename", "Rename file" }
+            new DataSourceItem("fail", "Fail uploading"),
+            new DataSourceItem("replace", "Replace file"),
+            new DataSourceItem("rename", "Rename file"),
         };
         return conflictBehaviors;
     }

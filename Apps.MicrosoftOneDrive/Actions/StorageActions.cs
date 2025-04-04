@@ -12,6 +12,7 @@ using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using RestSharp;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -159,7 +160,7 @@ public class StorageActions
                 if (!uploadResponse.IsSuccessful)
                 {
                     var error = SerializationExtensions.DeserializeResponseContent<ErrorDto>(responseContent);
-                    throw new Exception($"{error.Error.Code}: {error.Error.Message}");
+                    throw new PluginApplicationException(error.Error.Message);
                 }
                 
                 resumableUploadResult =
