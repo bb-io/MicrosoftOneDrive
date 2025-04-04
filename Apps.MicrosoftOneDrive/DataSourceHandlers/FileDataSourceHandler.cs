@@ -6,18 +6,18 @@ using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
-public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
+public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceItemHandler
 {
     public FileDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftOneDriveClient();
         var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,file)&$top=20";
-        var filesDictionary = new Dictionary<string, string>();
+        var filesList = new List<DataSourceItem>();
         var filesAmount = 0;
 
         do
@@ -33,27 +33,26 @@ public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                 .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
             foreach (var file in filteredFiles)
-                filesDictionary.Add(file.Id, file.Path);
+                filesList.Add(new DataSourceItem(file.Id, GetDisplayPath(file.Path)));
             
             filesAmount += filteredFiles.Count();
             endpoint = files.ODataNextLink?.Split("me/drive")[1];
         } while (filesAmount < 20 && endpoint != null);
-        
-        foreach (var file in filesDictionary)
+
+        return filesList;
+    }
+
+    private string GetDisplayPath(string path)
+    {
+        if (path.Length > 40)
         {
-            var filePath = file.Value;
-            if (filePath.Length > 40)
+            var filePathParts = path.Split("/");
+            if (filePathParts.Length > 3)
             {
-                var filePathParts = filePath.Split("/");
-                if (filePathParts.Length > 3)
-                {
-                    filePath = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
-                    filesDictionary[file.Key] = filePath;
-                }
+                path = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
             }
         }
-
-        return filesDictionary;
+        return path;
     }
 
     private string GetFilePath(FileMetadataDto file)

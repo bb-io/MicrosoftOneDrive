@@ -1,5 +1,6 @@
 ﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 
@@ -10,6 +11,6 @@ public class UploadFileRequest
     public FileReference File { get; set; }
     
     [Display("Conflict behavior")]
-    [DataSource(typeof(ConflictBehaviorDataSourceHandler))]
+    [StaticDataSource(typeof(ConflictBehaviorDataSourceHandler))]
     public string ConflictBehavior { get; set; }
 }

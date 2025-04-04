@@ -6,18 +6,18 @@ using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
-public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
+public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceItemHandler
 {
     public FolderDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
 
-    public async Task<Dictionary<string, string>> GetDataAsync(DataSourceContext context,
+    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
         var client = new MicrosoftOneDriveClient();
         var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,folder)&$top=20";
-        var foldersDictionary = new Dictionary<string, string>();
+        var foldersList = new List<DataSourceItem>();
         var foldersAmount = 0;
 
         do
@@ -33,25 +33,11 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
                 .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
             foreach (var folder in filteredFolders)
-                foldersDictionary.Add(folder.Id, folder.Path);
+                foldersList.Add(new DataSourceItem(folder.Id, GetDisplayPath(folder.Path)));
             
             foldersAmount += filteredFolders.Count();
             endpoint = folders.ODataNextLink?.Split("me/drive")[1];
-        } while (foldersAmount < 20 && endpoint != null);
-        
-        foreach (var folder in foldersDictionary)
-        {
-            var folderPath = folder.Value;
-            if (folderPath.Length > 40)
-            {
-                var folderPathParts = folderPath.Split("/");
-                if (folderPathParts.Length > 3)
-                {
-                    folderPath = string.Join("/", folderPathParts[1], "...", folderPathParts[^2], folderPathParts[^1]);
-                    foldersDictionary[folder.Key] = folderPath;
-                }
-            }
-        }
+        } while (foldersAmount < 20 && endpoint != null);        
 
         var rootName = "My files (root folder)";
         if (string.IsNullOrWhiteSpace(context.SearchString) 
@@ -60,10 +46,23 @@ public class FolderDataSourceHandler : BaseInvocable, IAsyncDataSourceHandler
             var request = new MicrosoftOneDriveRequest("/root", Method.Get,
                 InvocationContext.AuthenticationCredentialsProviders);
             var rootFolder = await client.ExecuteWithHandling<FolderMetadataDto>(request);
-            foldersDictionary.Add(rootFolder.Id, rootName);
+            foldersList.Add(new DataSourceItem(rootFolder.Id, rootName));
         }
             
-        return foldersDictionary;
+        return foldersList;
+    }
+
+    private string GetDisplayPath(string path)
+    {
+        if (path.Length > 40)
+        {
+            var filePathParts = path.Split("/");
+            if (filePathParts.Length > 3)
+            {
+                path = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
+            }
+        }
+        return path;
     }
 
     private string GetFolderPath(FolderMetadataDto folder)

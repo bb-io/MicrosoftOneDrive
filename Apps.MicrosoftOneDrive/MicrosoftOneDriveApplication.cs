@@ -21,12 +21,6 @@ public class MicrosoftOneDriveApplication : BaseInvocable, IApplication, ICatego
         _typesInstances = CreateTypesInstances();
     }
 
-    public string Name
-    {
-        get => "Microsoft OneDrive";
-        set { }
-    }
-
     public T GetInstance<T>()
     {
         if (!_typesInstances.TryGetValue(typeof(T), out var value))

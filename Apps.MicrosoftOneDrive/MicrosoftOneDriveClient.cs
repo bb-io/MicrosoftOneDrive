@@ -1,5 +1,6 @@
 ﻿using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Extensions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using RestSharp;
 
 namespace Apps.MicrosoftOneDrive;
@@ -36,6 +37,6 @@ public class MicrosoftOneDriveClient : RestClient
     private Exception ConfigureErrorException(string responseContent)
     {
         var error = responseContent.DeserializeResponseContent<ErrorDto>();
-        return new($"{error.Error.Code}: {error.Error.Message}");
+        return new PluginApplicationException(error.Error.Message);
     }
 }
