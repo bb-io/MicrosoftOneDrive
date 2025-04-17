@@ -13,7 +13,7 @@ namespace Apps.MicrosoftOneDrive.Webhooks;
 [PollingEventList]
 public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    [PollingEvent("On files created or updated", "On files created or updated")]
+    [PollingEvent("On files created or updated",Description = "On files created or updated")]
     public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
         PollingEventRequest<DeltaTokenMemory> request,
         [PollingEventParameter] FolderInput folder,
@@ -76,7 +76,7 @@ public class PollingList(InvocationContext invocationContext) : BaseInvocable(in
         };
     }
 
-    [PollingEvent("On folders created or updated", "On folders created or updated")]
+    [PollingEvent("On folders created or updated", Description = "On folders created or updated")]
     public async Task<PollingEventResponse<DeltaTokenMemory, ListFoldersResponse>> OnFoldersCreatedOrUpdated(
         PollingEventRequest<DeltaTokenMemory> request,
         [PollingEventParameter] FolderInput folder)

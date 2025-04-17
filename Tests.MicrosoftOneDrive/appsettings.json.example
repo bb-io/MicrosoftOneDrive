@@ -1,7 +1,6 @@
 {
   "ConnectionDefinition": {
-    "base_url": "",
-    "key": ""
+    "Authorization": ""
   },
   "TestFolder": "TestFiles"
 }
