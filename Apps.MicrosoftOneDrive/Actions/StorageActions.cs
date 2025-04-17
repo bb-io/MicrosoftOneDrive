@@ -13,6 +13,7 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using RestSharp;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -248,4 +249,11 @@ public class StorageActions
         await client.ExecuteWithHandling(request);
     }
     #endregion
+
+    [Action("DEBUG: Get auth data", Description = "Can be used only for debugging purposes.")]
+    public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders(
+    IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
+    {
+        return authenticationCredentialsProviders.ToList();
+    }
 }
