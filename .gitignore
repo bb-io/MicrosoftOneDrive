@@ -289,3 +289,4 @@ __pycache__/
 *.xsd.cs
 
 /Apps.MicrosoftOneDrive/ApplicationConstants.cs
+/Tests.MicrosoftOneDrive/appsettings.json
