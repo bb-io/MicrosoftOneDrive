@@ -251,7 +251,7 @@ public class StorageActions
 
     [Action("Search folders", Description = "")]
 
-    public async Task<IEnumerable<FolderMetadataDto>> SearhFolders(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+    public async Task<IEnumerable<SimpleFolderDto>> SearhFolders(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter][Display("Folder name")]string folderName)
     {
         var client = new MicrosoftOneDriveClient();
@@ -259,7 +259,7 @@ public class StorageActions
 
         var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
         request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-        var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FolderMetadataDto>>>(request);
+        var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<SimpleFolderDto>>>(request);
         var filteredFolders = folders.Value
                 .Select(w => w.DriveItem)
                 .Where(i => i.Name.Contains(folderName, StringComparison.OrdinalIgnoreCase));
