@@ -249,7 +249,7 @@ public class StorageActions
         await client.ExecuteWithHandling(request);
     }
 
-    [Action("Search folders", Description = "")]
+    [Action("Search folders", Description = "Get folders by name")]
 
     public async Task<IEnumerable<SimpleFolderDto>> SearhFolders(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter][Display("Folder name")]string folderName)

@@ -11,11 +11,7 @@ public class SimpleFolderDto
     
     [Display("Folder name")]
     public string Name { get; set; }
-    
-    [JsonConverter(typeof(UserConverter))]
-    [Display("Last modified by")]
-    public UserDto? LastModifiedBy { get; set; }
-    
+       
     [JsonProperty("folder")]
     [JsonConverter(typeof(ChildCountConverter))]
     [Display("Child count")]
