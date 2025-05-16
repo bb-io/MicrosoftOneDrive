@@ -248,6 +248,24 @@ public class StorageActions
         var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Delete, authenticationCredentialsProviders); 
         await client.ExecuteWithHandling(request);
     }
+
+    [Action("Search folders", Description = "")]
+
+    public async Task<IEnumerable<FolderMetadataDto>> SearhFolders(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
+        [ActionParameter][Display("Folder name")]string folderName)
+    {
+        var client = new MicrosoftOneDriveClient();
+        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,folder)";
+
+        var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
+        request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
+        var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FolderMetadataDto>>>(request);
+        var filteredFolders = folders.Value
+                .Select(w => w.DriveItem)
+                .Where(i => i.Name.Contains(folderName, StringComparison.OrdinalIgnoreCase));
+        return filteredFolders;
+    }
+        
     #endregion
 
     [Action("DEBUG: Get auth data", Description = "Can be used only for debugging purposes.")]
