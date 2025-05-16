@@ -40,7 +40,7 @@ public class StorageActions
         return fileMetadata;
     }
 
-    [Action("List changed files", Description = "List all files that have been created or modified during past hours. " +
+    [Action("Search changed files", Description = "List all files that have been created or modified during past hours. " +
                                                 "If number of hours is not specified, files changed during past 24 " +
                                                 "hours are listed.")]
     public async Task<ListFilesResponse> ListChangedFiles(
@@ -200,10 +200,10 @@ public class StorageActions
         return folderMetadata;
     }
 
-    [Action("List files in folder", Description = "Retrieve metadata for files contained in a folder.")]
+    [Action("Search files in folder", Description = "Retrieve metadata for files contained in a folder.")]
     public async Task<ListFilesResponse> ListFilesInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("Folder")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
+        [ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var client = new MicrosoftOneDriveClient();
         var filesInFolder = new List<FileMetadataDto>();
@@ -224,7 +224,7 @@ public class StorageActions
     [Action("Create folder in parent folder", Description = "Create a new folder in parent folder.")]
     public async Task<FolderMetadataDto> CreateFolderInParentFolderWithId(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("Parent folder")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
+        [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
         [ActionParameter] [Display("Folder name")] string folderName)
     {
         var client = new MicrosoftOneDriveClient();
@@ -242,7 +242,7 @@ public class StorageActions
     
     [Action("Delete folder", Description = "Delete folder in a drive.")]
     public async Task DeleteFolderById(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("Folder")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
+        [ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var client = new MicrosoftOneDriveClient();
         var request = new MicrosoftOneDriveRequest($"/items/{folderId}", Method.Delete, authenticationCredentialsProviders); 
@@ -275,7 +275,7 @@ public class StorageActions
         
     #endregion
 
-    [Action("DEBUG: Get auth data", Description = "Can be used only for debugging purposes.")]
+    [Action("Debug", Description = "Can be used only for debugging purposes.")]
     public List<AuthenticationCredentialsProvider> GetAuthenticationCredentialsProviders(
     IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
     {
