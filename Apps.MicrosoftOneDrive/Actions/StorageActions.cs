@@ -260,10 +260,17 @@ public class StorageActions
         var request = new MicrosoftOneDriveRequest(endpoint, Method.Get, authenticationCredentialsProviders);
         request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
         var folders = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<SimpleFolderDto>>>(request);
-        var filteredFolders = folders.Value
+        if (folders != null && folders.Value != null &&
+            folders.Value.Any(i => i.DriveItem.Name.Contains(folderName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return folders.Value
                 .Select(w => w.DriveItem)
                 .Where(i => i.Name.Contains(folderName, StringComparison.OrdinalIgnoreCase));
-        return filteredFolders;
+        }
+        else
+        {
+            return new SimpleFolderDto[0];
+        }
     }
         
     #endregion
