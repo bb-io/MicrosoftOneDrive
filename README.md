@@ -23,8 +23,8 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 
 - **Upload file to folder** Upload file to specified folder
 - **Download file** Download specified file
-- **List files in folder** List files metadata in specified folder
-- **List changed files** List changed files within specified amount of last hours
+- **Search files in folder** List files metadata in specified folder
+- **Search changed files** List changed files within specified amount of last hours
 - **Search folders** Get folders by name
 - **Get folder metadata** Get information about specific folder
 - **Get file metadata** Get information about specific file
