@@ -5,6 +5,7 @@ using Apps.MicrosoftOneDrive.Webhooks.Memory;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Blackbird.Applications.SDK.Blueprints;
 using Microsoft.AspNetCore.WebUtilities;
 using RestSharp;
 
@@ -13,6 +14,7 @@ namespace Apps.MicrosoftOneDrive.Webhooks;
 [PollingEventList]
 public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
+    [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
     [PollingEvent("On files created or updated",Description = "On files created or updated")]
     public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
         PollingEventRequest<DeltaTokenMemory> request,
