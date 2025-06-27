@@ -29,11 +29,11 @@ public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceItemHandler
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
                 .Where(i => i.MimeType != null)
-                .Select(i => new { i.Id, Path = GetFilePath(i) })
+                .Select(i => new { i.FileId, Path = GetFilePath(i) })
                 .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
             
             foreach (var file in filteredFiles)
-                filesList.Add(new DataSourceItem(file.Id, GetDisplayPath(file.Path)));
+                filesList.Add(new DataSourceItem(file.FileId, GetDisplayPath(file.Path)));
             
             filesAmount += filteredFiles.Count();
             endpoint = files.ODataNextLink?.Split("me/drive")[1];

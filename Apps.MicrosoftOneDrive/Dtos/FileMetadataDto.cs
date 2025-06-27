@@ -1,13 +1,14 @@
 ﻿using Apps.MicrosoftOneDrive.Converters;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.SDK.Blueprints.Interfaces.FileStorage;
 using Newtonsoft.Json;
 
 namespace Apps.MicrosoftOneDrive.Dtos;
 
-public class FileMetadataDto
+public class FileMetadataDto : IDownloadFileInput
 {
     [Display("File ID")]
-    public string Id { get; set; }
+    public string FileId { get; set; }
     
     [Display("Filename")]
     public string Name { get; set; }

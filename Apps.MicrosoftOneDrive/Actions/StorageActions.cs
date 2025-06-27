@@ -69,10 +69,10 @@ public class StorageActions
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+        [ActionParameter] DownloadFileRequest input)
     {
         var client = new MicrosoftOneDriveClient();
-        var request = new MicrosoftOneDriveRequest($"/items/{fileId}/content", Method.Get, authenticationCredentialsProviders);
+        var request = new MicrosoftOneDriveRequest($"/items/{input.FileId}/content", Method.Get, authenticationCredentialsProviders);
         var response = await client.ExecuteWithHandling(request);
         
         var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
@@ -90,10 +90,10 @@ public class StorageActions
         return new DownloadFileResponse { File = file };
     }
 
-    [Action("Upload file to folder", Description = "Upload a file to a parent folder.")]
+    [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
+        [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string? parentFolderId,
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
@@ -111,10 +111,13 @@ public class StorageActions
             : input.File.ContentType;
         var fileMetadata = new FileMetadataDto();
 
+        var conflictBehaviour = input.ConflictBehavior ?? "replace";
+        parentFolderId = string.IsNullOrWhiteSpace(parentFolderId) ? "root" : parentFolderId;
+
         if (fileSize < fourMegabytesInBytes)
         {
             var uploadRequest = new MicrosoftOneDriveRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
-                                                             $"?@microsoft.graph.conflictBehavior={input.ConflictBehavior}",
+                                                             $"?@microsoft.graph.conflictBehavior={conflictBehaviour}",
                 Method.Put, authenticationCredentialsProviders);
 
             uploadRequest.AddParameter("application/octet-stream", await fileStream.GetByteData(), ParameterType.RequestBody);
@@ -131,7 +134,7 @@ public class StorageActions
                 {{
                     ""deferCommit"": false,
                     ""item"": {{
-                        ""@microsoft.graph.conflictBehavior"": ""{input.ConflictBehavior}"",
+                        ""@microsoft.graph.conflictBehavior"": ""{conflictBehaviour}"",
                         ""name"": ""{input.File.Name}""
                     }}
                 }}");
