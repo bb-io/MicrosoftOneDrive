@@ -14,7 +14,6 @@ namespace Apps.MicrosoftOneDrive.Webhooks;
 [PollingEventList]
 public class PollingList(InvocationContext invocationContext) : BaseInvocable(invocationContext)
 {
-    [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
     [PollingEvent("On files created or updated",Description = "On files created or updated")]
     public async Task<PollingEventResponse<DeltaTokenMemory, ListFilesResponse>> OnFilesCreatedOrUpdated(
         PollingEventRequest<DeltaTokenMemory> request,
