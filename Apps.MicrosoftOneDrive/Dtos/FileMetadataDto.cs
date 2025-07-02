@@ -8,6 +8,7 @@ namespace Apps.MicrosoftOneDrive.Dtos;
 public class FileMetadataDto : IDownloadFileInput
 {
     [Display("File ID")]
+    [JsonProperty("id")]
     public string FileId { get; set; }
     
     [Display("Filename")]
