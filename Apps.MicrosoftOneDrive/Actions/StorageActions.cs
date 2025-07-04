@@ -67,6 +67,7 @@ public class StorageActions
         return new ListFilesResponse { Files = changedFiles };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.DownloadFile)]
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -91,6 +92,7 @@ public class StorageActions
         return new DownloadFileResponse { File = file };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
