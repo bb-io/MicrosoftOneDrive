@@ -67,6 +67,7 @@ public class StorageActions
         return new ListFilesResponse { Files = changedFiles };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.DownloadFile)]
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -91,6 +92,7 @@ public class StorageActions
         return new DownloadFileResponse { File = file };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
@@ -204,7 +206,7 @@ public class StorageActions
         return folderMetadata;
     }
 
-    [Action("Search files in folder", Description = "Retrieve metadata for files contained in a folder.")]
+    [Action("Search files", Description = "Retrieve metadata for files contained in a folder.")]
     public async Task<ListFilesResponse> ListFilesInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
@@ -225,7 +227,7 @@ public class StorageActions
         return new ListFilesResponse { Files = filesInFolder };
     }
     
-    [Action("Create folder in parent folder", Description = "Create a new folder in parent folder.")]
+    [Action("Create folder", Description = "Create a new folder in parent folder.")]
     public async Task<FolderMetadataDto> CreateFolderInParentFolderWithId(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
