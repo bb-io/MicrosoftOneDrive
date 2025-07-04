@@ -204,7 +204,7 @@ public class StorageActions
         return folderMetadata;
     }
 
-    [Action("Search files in folder", Description = "Retrieve metadata for files contained in a folder.")]
+    [Action("Search files", Description = "Retrieve metadata for files contained in a folder.")]
     public async Task<ListFilesResponse> ListFilesInFolderById(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
@@ -225,7 +225,7 @@ public class StorageActions
         return new ListFilesResponse { Files = filesInFolder };
     }
     
-    [Action("Create folder in parent folder", Description = "Create a new folder in parent folder.")]
+    [Action("Create folder", Description = "Create a new folder in parent folder.")]
     public async Task<FolderMetadataDto> CreateFolderInParentFolderWithId(
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
         [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
