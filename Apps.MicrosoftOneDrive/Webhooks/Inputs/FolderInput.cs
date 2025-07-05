@@ -6,7 +6,7 @@ namespace Apps.MicrosoftOneDrive.Webhooks.Inputs;
 
 public class FolderInput
 {
-    [Display("Parent folder ID")] 
+    [Display("Folder ID")] 
     [DataSource(typeof(FolderDataSourceHandler))]
     public string? ParentFolderId { get; set; }
 }

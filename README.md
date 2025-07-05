@@ -19,28 +19,34 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 
 ## Actions
 
-### Storage
+### Files
 
-- **Upload file to folder** Upload file to specified folder
+- **Upload file** Upload file to specified folder
 - **Download file** Download specified file
-- **Search files in folder** List files metadata in specified folder
-- **Search changed files** List changed files within specified amount of last hours
-- **Search folders** Get folders by name
-- **Get folder metadata** Get information about specific folder
-- **Get file metadata** Get information about specific file
-- **Create folder in parent folder** Create new folder in another folder
-- **Delete folder** Delete specified folder
+- **Search files** List files metadata in specified folder
+- **Get file metadata** Get information about a specific file
 - **Delete file** Delete specified file
 
+### Folders
+
+- **Search folder** Find a folder by name
+- **Get folder metadata** Get information about a specific folder
+- **Create folder** Create a new folder in another folder
+- **Delete folder** Delete specified folder
+
 > When uploading a file to a folder, you can choose from the following options how to behave in case of conflict (there is already a file with the same name in the specified folder):
-**Fail Uploading**: If a file with the same name exists, the upload will stop, preserving the original file.
-**Replace File**: The existing file will be overwritten by the new upload, replacing its contents.
-**Rename File**: The new file will be saved with a unique name, preserving both the original and the uploaded files.
+*Fail Uploading*: If a file with the same name exists, the upload will stop, preserving the original file.
+*Replace File*: The existing file will be overwritten by the new upload, replacing its contents.
+*Rename File*: The new file will be saved with a unique name, preserving both the original and the uploaded files.
 
-## Polling events
+## Events
 
-- **On files created or updated** This polling event is triggered when files are created or updated. You can specify the folder to watch for changes and `Include subfolders` option to include changes in subfolders (by default it is set to `false`).
-- **On folders created or updated** This polling event is triggered when folders are created or updated.
+### Files
+
+- **On files updated** This polling event is triggered when files are created or updated. You can specify the folder to watch for changes and `Include subfolders` option to include changes in subfolders (by default it is set to `false`).
+
+### Folders
+- **On folders updated** This polling event is triggered when folders are created or updated.
 
 ## Examples
 
