@@ -10,8 +10,8 @@ public class ConnectionValidator : IConnectionValidator
         IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders, 
         CancellationToken cancellationToken)
     {
-        var client = new MicrosoftOneDriveClient();
-        var request = new MicrosoftOneDriveRequest("", Method.Get, authenticationCredentialsProviders);
+        var client = new MicrosoftOneDriveClient(authenticationCredentialsProviders);
+        var request = new RestRequest("", Method.Get);
         
         try
         {

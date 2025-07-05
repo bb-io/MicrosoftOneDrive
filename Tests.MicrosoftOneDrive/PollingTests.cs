@@ -12,7 +12,7 @@ namespace Tests.MicrosoftOneDrive
         [TestMethod]
         public async Task OnFileAddedOrUpdated_IsSuccess()
         {
-            var polling = new PollingList(InvocationContext);
+            var polling = new FilePolling(InvocationContext);
             var oldDate = new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc);
             var response = await polling.OnFilesCreatedOrUpdated(
                 new PollingEventRequest<DeltaTokenMemory> { PollingTime= oldDate, Memory = null } , 
@@ -31,7 +31,7 @@ namespace Tests.MicrosoftOneDrive
         [TestMethod]
         public async Task OnFolderAddedOrUpdated_IsSuccess()
         {
-            var polling = new PollingList(InvocationContext);
+            var polling = new FolderPolling(InvocationContext);
             var oldDate = new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc);
             var response = await polling.OnFoldersCreatedOrUpdated(
                 new PollingEventRequest<DeltaTokenMemory>

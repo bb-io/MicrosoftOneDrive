@@ -1,31 +1,25 @@
 ﻿using Apps.MicrosoftOneDrive.Dtos;
-using Blackbird.Applications.Sdk.Common;
+using Apps.MicrosoftOneDrive.Invocables;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
-public class FileDataSourceHandler : BaseInvocable, IAsyncDataSourceItemHandler
+public class FileDataSourceHandler(InvocationContext invocationContext) : OneDriveInvocable(invocationContext), IAsyncDataSourceItemHandler
 {
-    public FileDataSourceHandler(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        var client = new MicrosoftOneDriveClient();
         var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,file)&$top=20";
         var filesList = new List<DataSourceItem>();
         var filesAmount = 0;
 
         do
         {
-            var request = new MicrosoftOneDriveRequest(endpoint, Method.Get,
-                InvocationContext.AuthenticationCredentialsProviders);
+            var request = new RestRequest(endpoint, Method.Get);
             request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-            var files = await client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
+            var files = await Client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
             var filteredFiles = files.Value
                 .Select(w => w.DriveItem)
                 .Where(i => i.MimeType != null)
