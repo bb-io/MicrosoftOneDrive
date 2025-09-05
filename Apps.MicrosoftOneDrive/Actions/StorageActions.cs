@@ -16,6 +16,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Apps.MicrosoftOneDrive.Invocables;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -35,27 +36,22 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         [ActionParameter][Display("Folder ID")][DataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var filesInFolder = new List<FileMetadataDto>();
-        var endpoint = $"/items/{folderId}/children";
+        string? next = $"/items/{folderId}/children";
 
         do
         {
-            var request = new RestRequest(endpoint, Method.Get);
+            var request = Uri.IsWellFormedUriString(next, UriKind.Absolute)
+                ? new RestRequest(new Uri(next!), Method.Get)
+                : new RestRequest(next!, Method.Get); 
+
             var result = await Client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
 
             var page = result?.Value ?? Array.Empty<FileMetadataDto>();
-            filesInFolder.AddRange(page.Where(item => !string.IsNullOrEmpty(item.MimeType)));
+            filesInFolder.AddRange(page.Where(i => !string.IsNullOrEmpty(i.MimeType)));
 
-            endpoint = null;
-            var next = result?.ODataNextLink;
-            if (!string.IsNullOrEmpty(next))
-            {
-                const string driveRoot = "https://graph.microsoft.com/v1.0/me/drive";
-                endpoint = next!.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
-                    ? next.Substring(driveRoot.Length)
-                    : new Uri(next).PathAndQuery;
-            }
-
-        } while (!string.IsNullOrEmpty(endpoint));
+            next = result?.ODataNextLink;
+        }
+        while (!string.IsNullOrEmpty(next));
 
         return new ListFilesResponse { Files = filesInFolder };
     }
