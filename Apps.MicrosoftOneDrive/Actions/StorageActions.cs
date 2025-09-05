@@ -41,10 +41,21 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         {
             var request = new RestRequest(endpoint, Method.Get);
             var result = await Client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
-            var files = result.Value.Where(item => item.MimeType != null);
-            filesInFolder.AddRange(files);
-            endpoint = result.ODataNextLink?.Split("drive")[1];
-        } while (endpoint != null);
+
+            var page = result?.Value ?? Array.Empty<FileMetadataDto>();
+            filesInFolder.AddRange(page.Where(item => !string.IsNullOrEmpty(item.MimeType)));
+
+            endpoint = null;
+            var next = result?.ODataNextLink;
+            if (!string.IsNullOrEmpty(next))
+            {
+                const string driveRoot = "https://graph.microsoft.com/v1.0/me/drive";
+                endpoint = next!.StartsWith(driveRoot, StringComparison.OrdinalIgnoreCase)
+                    ? next.Substring(driveRoot.Length)
+                    : new Uri(next).PathAndQuery;
+            }
+
+        } while (!string.IsNullOrEmpty(endpoint));
 
         return new ListFilesResponse { Files = filesInFolder };
     }
@@ -162,4 +173,7 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         var request = new RestRequest($"/items/{fileId}", Method.Delete); 
         await Client.ExecuteWithHandling(request);
     }
+
+    [Action("[Debug] Action", Description = "Debug action")]
+    public List<AuthenticationCredentialsProvider> DebugAction() => InvocationContext.AuthenticationCredentialsProviders.ToList();
 }
