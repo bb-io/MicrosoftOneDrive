@@ -16,7 +16,6 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Apps.MicrosoftOneDrive.Invocables;
 using Blackbird.Applications.Sdk.Common.Authentication;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
