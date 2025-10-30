@@ -10,7 +10,7 @@ namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
 public class FileDataSourceHandler(InvocationContext invocationContext) : OneDriveInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
-    private const string RootFolderDisplayName = "Root";
+    private const string RootFolderDisplayName = "My files";
 
     public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken cancellationToken)
     {
