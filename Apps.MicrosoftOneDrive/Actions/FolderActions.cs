@@ -1,11 +1,12 @@
 ﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Apps.MicrosoftOneDrive.Dtos;
+using Apps.MicrosoftOneDrive.Invocables;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Dynamic;
-using RestSharp;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Apps.MicrosoftOneDrive.Invocables;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
+using RestSharp;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -13,7 +14,7 @@ namespace Apps.MicrosoftOneDrive.Actions;
 public class FolderActions(InvocationContext context) : OneDriveInvocable(context)
 {    
     [Action("Get folder metadata", Description = "Retrieve the metadata for a folder in a drive.")]
-    public async Task<FolderMetadataDto> GetFolderMetadataById([ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
+    public async Task<FolderMetadataDto> GetFolderMetadataById([ActionParameter] [Display("Folder ID")] [FileDataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var request = new RestRequest($"/items/{folderId}", Method.Get);
         var folderMetadata = await Client.ExecuteWithHandling<FolderMetadataDto>(request);
@@ -22,7 +23,7 @@ public class FolderActions(InvocationContext context) : OneDriveInvocable(contex
     
     [Action("Create folder", Description = "Create a new folder in parent folder.")]
     public async Task<FolderMetadataDto> CreateFolderInParentFolderWithId(
-        [ActionParameter] [Display("Parent folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
+        [ActionParameter] [Display("Parent folder ID")] [FileDataSource(typeof(FolderDataSourceHandler))] string parentFolderId,
         [ActionParameter] [Display("Folder name")] string folderName)
     {
         var request = new RestRequest($"/items/{parentFolderId}/children", Method.Post);
@@ -36,7 +37,7 @@ public class FolderActions(InvocationContext context) : OneDriveInvocable(contex
     }
     
     [Action("Delete folder", Description = "Delete folder in a drive.")]
-    public async Task DeleteFolderById([ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string folderId)
+    public async Task DeleteFolderById([ActionParameter] [Display("Folder ID")] [FileDataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var request = new RestRequest($"/items/{folderId}", Method.Delete); 
         await Client.ExecuteWithHandling(request);

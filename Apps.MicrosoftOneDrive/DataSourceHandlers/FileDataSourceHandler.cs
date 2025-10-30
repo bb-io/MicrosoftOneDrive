@@ -1,60 +1,93 @@
 ﻿using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Invocables;
-using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 using RestSharp;
+using File = Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems.File;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
-public class FileDataSourceHandler(InvocationContext invocationContext) : OneDriveInvocable(invocationContext), IAsyncDataSourceItemHandler
+public class FileDataSourceHandler(InvocationContext invocationContext) : OneDriveInvocable(invocationContext), IAsyncFileDataSourceItemHandler
 {
-    public async Task<IEnumerable<DataSourceItem>> GetDataAsync(DataSourceContext context,
-        CancellationToken cancellationToken)
+    private const string RootFolderDisplayName = "Root";
+
+    public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken cancellationToken)
     {
-        var endpoint = "/list/items?$select=id&$expand=driveItem($select=id,name,parentReference,file)&$top=20";
-        var filesList = new List<DataSourceItem>();
-        var filesAmount = 0;
+        var result = new List<FileDataItem>();
+        var sourceItems = await ListItemsInFolderById(string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId);
+
+        foreach (var item in sourceItems)
+        {
+            result.Add(string.IsNullOrEmpty(item.MimeType) ?
+                new Folder() { Id = item.FileId, Date = item.CreatedDateTime, DisplayName = item.Name, IsSelectable = false } :
+                new File() { Id = item.FileId, Date = item.LastModifiedDateTime, DisplayName = item.Name, Size = item.Size, IsSelectable = true });
+        }
+        return result;
+    }
+
+    private async Task<List<FileMetadataDto>> ListItemsInFolderById(string folderId)
+    {
+        var filesInFolder = new List<FileMetadataDto>();
+        string? next = $"/items/{folderId}/children";
 
         do
         {
-            var request = new RestRequest(endpoint, Method.Get);
-            request.AddHeader("Prefer", "HonorNonIndexedQueriesWarningMayFailRandomly");
-            var files = await Client.ExecuteWithHandling<ListWrapper<DriveItemWrapper<FileMetadataDto>>>(request);
-            var filteredFiles = files.Value
-                .Select(w => w.DriveItem)
-                .Where(i => i.MimeType != null)
-                .Select(i => new { i.FileId, Path = GetFilePath(i) })
-                .Where(i => i.Path.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase));
-            
-            foreach (var file in filteredFiles)
-                filesList.Add(new DataSourceItem(file.FileId, GetDisplayPath(file.Path)));
-            
-            filesAmount += filteredFiles.Count();
-            endpoint = files.ODataNextLink?.Split("me/drive")[1];
-        } while (filesAmount < 20 && endpoint != null);
+            var request = Uri.IsWellFormedUriString(next, UriKind.Absolute)
+                ? new RestRequest(new Uri(next!), Method.Get)
+                : new RestRequest(next!, Method.Get);
 
-        return filesList;
+            var result = await Client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
+
+            var page = result?.Value ?? Array.Empty<FileMetadataDto>();
+            filesInFolder.AddRange(page);
+
+            next = result?.ODataNextLink;
+        }
+        while (!string.IsNullOrEmpty(next));
+
+        return filesInFolder;
     }
 
-    private string GetDisplayPath(string path)
+    public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken cancellationToken)
     {
-        if (path.Length > 40)
+        if (string.IsNullOrEmpty(context?.FileDataItemId))
+            return new List<FolderPathItem>() { new FolderPathItem() { DisplayName = RootFolderDisplayName, Id = "root" } };
+
+        var result = new List<FolderPathItem>();
+        try
         {
-            var filePathParts = path.Split("/");
-            if (filePathParts.Length > 3)
+
+            var fileMetadataDto = await GetFileMetadataById(context.FileDataItemId);
+            var parentFolderId = fileMetadataDto?.ParentReference?.Id;
+
+            while (!string.IsNullOrEmpty(parentFolderId))
             {
-                path = string.Join("/", filePathParts[0], "...", filePathParts[^2], filePathParts[^1]);
+                var parentFolder = await GetFileMetadataById(parentFolderId);
+                result = result.Prepend(new FolderPathItem()
+                {
+                    DisplayName = parentFolder.Name,
+                    Id = parentFolder.FileId,
+                }).ToList();
+                parentFolderId = parentFolder?.ParentReference?.Id;
+            }
+            var rootFolder = result.FirstOrDefault();
+            if (rootFolder != null)
+            {
+                rootFolder.DisplayName = RootFolderDisplayName;
+                rootFolder.Id = "root";
             }
         }
-        return path;
+        catch (Exception ex)
+        {
+            result.Add(new FolderPathItem() { DisplayName = RootFolderDisplayName, Id = "root" });
+        }
+        return result;
     }
 
-    private string GetFilePath(FileMetadataDto file)
+    public async Task<FileMetadataDto> GetFileMetadataById(string fileId)
     {
-        var parentPath = file.ParentReference.Path.Split("root:");
-        if (parentPath[1] == "")
-            return file.Name;
-
-        return $"{parentPath[1].Substring(1)}/{file.Name}";
+        var request = new RestRequest($"/items/{fileId}", Method.Get);
+        return await Client.ExecuteWithHandling<FileMetadataDto>(request);
     }
 }

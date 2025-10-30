@@ -1,21 +1,21 @@
-﻿using System.Net.Mime;
-using Apps.MicrosoftOneDrive.DataSourceHandlers;
+﻿using Apps.MicrosoftOneDrive.DataSourceHandlers;
 using Apps.MicrosoftOneDrive.Dtos;
 using Apps.MicrosoftOneDrive.Extensions;
+using Apps.MicrosoftOneDrive.Invocables;
 using Apps.MicrosoftOneDrive.Models.Requests;
 using Apps.MicrosoftOneDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Dynamic;
-using Blackbird.Applications.Sdk.Common.Files;
-using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
-using Blackbird.Applications.Sdk.Utils.Extensions.Files;
-using RestSharp;
-using Blackbird.Applications.Sdk.Common.Exceptions;
-using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.SDK.Blueprints;
-using Apps.MicrosoftOneDrive.Invocables;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using Blackbird.Applications.SDK.Blueprints;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
+using RestSharp;
+using System.Net.Mime;
 
 namespace Apps.MicrosoftOneDrive.Actions;
 
@@ -24,7 +24,7 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
 {
 
     [Action("Get file metadata", Description = "Retrieve the metadata for a file in a drive.")]
-    public async Task<FileMetadataDto> GetFileMetadataById([ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+    public async Task<FileMetadataDto> GetFileMetadataById([ActionParameter] [Display("File ID")] [FileDataSource(typeof(FileDataSourceHandler))] string fileId)
     {
         var request = new RestRequest($"/items/{fileId}", Method.Get);
         return await Client.ExecuteWithHandling<FileMetadataDto>(request);
@@ -32,7 +32,7 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
 
     [Action("Search files", Description = "Retrieve metadata for files contained in a folder.")]
     public async Task<ListFilesResponse> ListFilesInFolderById(
-        [ActionParameter][Display("Folder ID")][DataSource(typeof(FolderDataSourceHandler))] string folderId)
+        [ActionParameter][Display("Folder ID")][FileDataSource(typeof(FolderDataSourceHandler))] string folderId)
     {
         var filesInFolder = new List<FileMetadataDto>();
         string? next = $"/items/{folderId}/children";
@@ -80,7 +80,7 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
-        [ActionParameter] [Display("Folder ID")] [DataSource(typeof(FolderDataSourceHandler))] string? parentFolderId,
+        [ActionParameter] [Display("Folder ID")] [FileDataSource(typeof(FolderDataSourceHandler))] string? parentFolderId,
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
@@ -163,7 +163,7 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
     }
     
     [Action("Delete file", Description = "Delete file in a drive.")]
-    public async Task DeleteFileId([ActionParameter] [Display("File ID")] [DataSource(typeof(FileDataSourceHandler))] string fileId)
+    public async Task DeleteFileId([ActionParameter] [Display("File ID")] [FileDataSource(typeof(FileDataSourceHandler))] string fileId)
     {
         var request = new RestRequest($"/items/{fileId}", Method.Delete); 
         await Client.ExecuteWithHandling(request);
