@@ -4,7 +4,6 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 using RestSharp;
-using File = Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems.File;
 
 namespace Apps.MicrosoftOneDrive.DataSourceHandlers;
 
@@ -17,7 +16,7 @@ public class FolderDataSourceHandler(InvocationContext invocationContext) : OneD
         var sourceItems = await ListItemsInFolderById(string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId);
         return sourceItems
             .Where(x => string.IsNullOrEmpty(x.MimeType))
-            .Select(x => new Folder() { Id = x.FileId, Date = x.CreatedDateTime, DisplayName = x.Name, IsSelectable = true });
+            .Select(x => new Folder() { Id = x.FileId, Date = x.CreatedDateTime, DisplayName = x.Name, IsSelectable = true }).ToList<FileDataItem>();
     }
 
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken cancellationToken)
