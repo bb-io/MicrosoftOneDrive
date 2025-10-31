@@ -14,15 +14,10 @@ public class FolderDataSourceHandler(InvocationContext invocationContext) : OneD
 
     public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken cancellationToken)
     {
-        var result = new List<FileDataItem>();
         var sourceItems = await ListItemsInFolderById(string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId);
-
-        foreach (var item in sourceItems)
-        {
-            result.Add(string.IsNullOrEmpty(item.MimeType) ? new Folder() { Id = item.FileId, Date = item.CreatedDateTime, DisplayName = item.Name, IsSelectable = true } :
-            new File() { Id = item.FileId, Date = item.LastModifiedDateTime, DisplayName = item.Name, Size = item.Size, IsSelectable = false });
-        }
-        return result;
+        return sourceItems
+            .Where(x => string.IsNullOrEmpty(x.MimeType))
+            .Select(x => new Folder() { Id = x.FileId, Date = x.CreatedDateTime, DisplayName = x.Name, IsSelectable = true });
     }
 
     public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken cancellationToken)
