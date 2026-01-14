@@ -59,22 +59,17 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
     [Action("Download file", Description = "Download a file in a drive.")]
     public async Task<DownloadFileResponse> DownloadFileById([ActionParameter] DownloadFileRequest input)
     {
-        var request = new RestRequest($"/items/{input.FileId}/content", Method.Get);
-        var response = await Client.ExecuteWithHandling(request);
+        var fileMetadata = await GetFileMetadataById(input.FileId);
+        if (fileMetadata == null)
+            throw new PluginApplicationException("File not found or inaccessible.");
         
-        var filenameHeader = response.ContentHeaders.First(h => h.Name == "Content-Disposition");
-        var filename = filenameHeader.Value.ToString().Split('"')[1];
-        var contentType = response.ContentType == MediaTypeNames.Text.Plain
-            ? MediaTypeNames.Text.RichText
-            : response.ContentType;
-
-        FileReference file;
-        using(var stream = new MemoryStream(response.RawBytes))
-        {
-            file = await _fileManagementClient.UploadAsync(stream, contentType, filename);
-        }
+        var privateUrl = "https://graph.microsoft.com/v1.0/me/drive/items/" + input.FileId + "/content";
+        var fileRequest = new HttpRequestMessage(HttpMethod.Get, privateUrl);
+        var accessToken = Creds.First(p => p.KeyName == "Authorization").Value;
+        fileRequest.Headers.Add("Authorization", accessToken);
+        var reference = new FileReference(fileRequest, fileMetadata.Name, MimeTypes.GetMimeType(fileMetadata.Name));
         
-        return new DownloadFileResponse { File = file };
+        return new DownloadFileResponse { File = reference };
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
