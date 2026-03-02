@@ -72,6 +72,33 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         return new DownloadFileResponse { File = reference };
     }
 
+    [Action("Download all files in folder", Description = "Download all files contained in a folder (optionally including subfolders).")]
+    public async Task<DownloadAllFilesResponse> DownloadAllFilesInFolder(
+    [ActionParameter] DownloadAllFilesInFolderRequest input)
+    {
+        if (string.IsNullOrWhiteSpace(input.FolderId))
+            throw new PluginMisconfigurationException("Folder ID is required.");
+
+        var accessToken = Creds.First(p => p.KeyName == "Authorization").Value;
+
+        var allFileMetas = await GetAllFilesFromFolder(input.FolderId, input.Recursive ?? false);
+
+        var fileReferences = allFileMetas.Select(m =>
+        {
+            var privateUrl = $"https://graph.microsoft.com/v1.0/me/drive/items/{m.FileId}/content";
+            var fileRequest = new HttpRequestMessage(HttpMethod.Get, privateUrl);
+            fileRequest.Headers.Add("Authorization", accessToken);
+
+            var name = string.IsNullOrWhiteSpace(m.Name) ? $"{m.FileId}" : m.Name;
+            var mime = MimeTypes.GetMimeType(name);
+
+            return new FileReference(fileRequest, name, mime);
+        }).ToList();
+
+        return new DownloadAllFilesResponse { Files = fileReferences };
+    }
+
+
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
@@ -166,4 +193,43 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
 
     [Action("[Debug] Action", Description = "Debug action")]
     public List<AuthenticationCredentialsProvider> DebugAction() => InvocationContext.AuthenticationCredentialsProviders.ToList();
+
+    private async Task<List<FileMetadataDto>> GetAllFilesFromFolder(string folderId, bool recursive)
+    {
+        var result = new List<FileMetadataDto>();
+
+        string? next = $"/items/{folderId}/children";
+        do
+        {
+            var request = Uri.IsWellFormedUriString(next, UriKind.Absolute)
+                ? new RestRequest(new Uri(next!), Method.Get)
+                : new RestRequest(next!, Method.Get);
+
+            var pageResult = await Client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
+
+            var page = pageResult?.Value ?? Array.Empty<FileMetadataDto>();
+
+            var files = page.Where(i => !string.IsNullOrEmpty(i.MimeType)).ToList();
+            result.AddRange(files);
+
+            if (recursive)
+            {
+                var folders = page.Where(i => string.IsNullOrEmpty(i.MimeType)).ToList();
+
+                foreach (var folder in folders)
+                {
+                    if (!string.IsNullOrWhiteSpace(folder?.FileId))
+                    {
+                        var nestedFiles = await GetAllFilesFromFolder(folder.FileId, true);
+                        result.AddRange(nestedFiles);
+                    }
+                }
+            }
+
+            next = pageResult?.ODataNextLink;
+        }
+        while (!string.IsNullOrEmpty(next));
+
+        return result;
+    }
 }

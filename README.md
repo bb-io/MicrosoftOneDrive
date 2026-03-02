@@ -26,6 +26,7 @@ OneDrive is the Microsoft cloud service that connects you to all your files. It 
 - **Search files** List files metadata in specified folder
 - **Get file metadata** Get information about a specific file
 - **Delete file** Delete specified file
+- **Download all files in folder** Download all files in specified folder. Can include files in subfolders if `Include subfolders` option is set to `true`.
 
 ### Folders
 
