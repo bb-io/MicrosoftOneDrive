@@ -12,11 +12,11 @@ public class HandlerTests : TestBase
     {
         var handlet = new FolderDataSourceHandler(InvocationContext);
 
-        var result = await handlet.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+        var result = await handlet.GetFolderContentAsync(new Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems.FolderContentDataSourceContext {  }, CancellationToken.None);
 
         foreach (var folder in result)
         {
-            Console.WriteLine($"{folder.Value}-{folder.DisplayName}");
+            Console.WriteLine($"{folder.Id}-{folder.DisplayName}");
         }
         Assert.IsNotNull(result);
     }
@@ -27,11 +27,11 @@ public class HandlerTests : TestBase
     {
         var handlet = new FileDataSourceHandler(InvocationContext);
 
-        var result = await handlet.GetDataAsync(new DataSourceContext { SearchString = "" }, CancellationToken.None);
+        var result = await handlet.GetFolderContentAsync(new Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems.FolderContentDataSourceContext { }, CancellationToken.None);
 
         foreach (var file in result)
         {
-            Console.WriteLine($"{file.Value}-{file.DisplayName}");
+            Console.WriteLine($"{file.Id}-{file.DisplayName}");
         }
         Assert.IsNotNull(result);
     }

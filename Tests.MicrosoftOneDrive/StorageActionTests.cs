@@ -25,5 +25,20 @@ namespace Tests.MicrosoftOneDrive
 
             Assert.IsNotNull(response);
         }
+
+        [TestMethod]
+        public async Task DownloadAllFilesInFolder_ShouldReturnFileMetadata()
+        {
+            var action = new StorageActions(InvocationContext, FileManager);
+
+            var response = await action.DownloadAllFilesInFolder( new Apps.MicrosoftOneDrive.Models.Requests.DownloadAllFilesInFolderRequest { FolderId = "016FYB3YK6XMOTS275MVC3CW6PJNDKGRN2" });
+
+            foreach (var item in response.Files)
+            {
+                Console.WriteLine($"{item.Name}");
+            }
+
+            Assert.IsNotNull(response);
+        }
     }
 }
