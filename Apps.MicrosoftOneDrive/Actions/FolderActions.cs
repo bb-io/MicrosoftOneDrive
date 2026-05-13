@@ -64,5 +64,4 @@ public class FolderActions(InvocationContext context) : OneDriveInvocable(contex
             return new SimpleFolderDto[0];
         }
     }
-
 }
