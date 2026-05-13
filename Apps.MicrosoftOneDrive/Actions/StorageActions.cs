@@ -72,6 +72,33 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         return new DownloadFileResponse { File = reference };
     }
 
+    [Action("Download all files in folder", Description = "Download all files contained in a folder (optionally including subfolders).")]
+    public async Task<DownloadAllFilesResponse> DownloadAllFilesInFolder(
+    [ActionParameter] DownloadAllFilesInFolderRequest input)
+    {
+        if (string.IsNullOrWhiteSpace(input.FolderId))
+            throw new PluginMisconfigurationException("Folder ID is required.");
+
+        var accessToken = Creds.First(p => p.KeyName == "Authorization").Value;
+
+        var allFileMetas = await GetAllFilesFromFolder(input.FolderId, input.Recursive ?? false);
+
+        var fileReferences = allFileMetas.Select(m =>
+        {
+            var privateUrl = $"https://graph.microsoft.com/v1.0/me/drive/items/{m.FileId}/content";
+            var fileRequest = new HttpRequestMessage(HttpMethod.Get, privateUrl);
+            fileRequest.Headers.Add("Authorization", accessToken);
+
+            var name = string.IsNullOrWhiteSpace(m.Name) ? $"{m.FileId}" : m.Name;
+            var mime = MimeTypes.GetMimeType(name);
+
+            return new FileReference(fileRequest, name, mime);
+        }).ToList();
+
+        return new DownloadAllFilesResponse { Files = fileReferences };
+    }
+
+
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload a file to a parent folder.")]
     public async Task<FileMetadataDto> UploadFileInFolderById(
@@ -79,82 +106,17 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
         [ActionParameter] UploadFileRequest input)
     {
         const int fourMegabytesInBytes = 4194304;
-        var file = await _fileManagementClient.DownloadAsync(input.File);
-    
-        var fileStream = new MemoryStream();
-        await file.CopyToAsync(fileStream);
-        fileStream.Position = 0;
 
-        var fileSize = fileStream.Length;
-        var contentType = Path.GetExtension(input.File.Name) == ".txt"
-            ? MediaTypeNames.Text.Plain
-            : input.File.ContentType;
-        var fileMetadata = new FileMetadataDto();
+        await using var file = await _fileManagementClient.DownloadAsync(input.File);
 
+        var normalizedParentFolderId = NormalizeParentFolderId(parentFolderId);
         var conflictBehaviour = input.ConflictBehavior ?? "replace";
-        parentFolderId = string.IsNullOrWhiteSpace(parentFolderId) ? "root" : parentFolderId;
+        var contentType = GetContentType(input.File);
+        var fileSize = input.File.Size;
 
-        if (fileSize < fourMegabytesInBytes)
-        {
-            var uploadRequest = new RestRequest($".//items/{parentFolderId}:/{input.File.Name}:/content" +
-                                                             $"?@microsoft.graph.conflictBehavior={conflictBehaviour}", Method.Put);
-
-            uploadRequest.AddParameter("application/octet-stream", await fileStream.GetByteData(), ParameterType.RequestBody);
-            fileMetadata = await Client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
-        }
-        else
-        {
-            const int chunkSize = 3932160;
-
-            var createUploadSessionRequest = new RestRequest(
-                $".//items/{parentFolderId}:/{input.File.Name}:/createUploadSession", Method.Post);
-            createUploadSessionRequest.AddJsonBody($@"
-                {{
-                    ""deferCommit"": false,
-                    ""item"": {{
-                        ""@microsoft.graph.conflictBehavior"": ""{conflictBehaviour}"",
-                        ""name"": ""{input.File.Name}""
-                    }}
-                }}");
-
-            var resumableUploadResult = await Client.ExecuteWithHandling<ResumableUploadDto>(createUploadSessionRequest);
-            var uploadUrl = new Uri(resumableUploadResult.UploadUrl);
-            var baseUrl = uploadUrl.GetLeftPart(UriPartial.Authority);
-            var endpoint = uploadUrl.PathAndQuery;
-            var uploadClient = new RestClient(new RestClientOptions { BaseUrl = new(baseUrl) });
-
-            var fileBytes = await fileStream.GetByteData();
-            do
-            {
-                var startByte = int.Parse(resumableUploadResult.NextExpectedRanges.First().Split("-")[0]);
-                var buffer = fileBytes.Skip(startByte).Take(chunkSize).ToArray();
-                var bufferSize = buffer.Length;
-                
-                var uploadRequest = new RestRequest(endpoint, Method.Put);
-                uploadRequest.AddParameter(contentType, buffer, ParameterType.RequestBody);
-                uploadRequest.AddHeader("Content-Length", bufferSize);
-                uploadRequest.AddHeader("Content-Range", 
-                    $"bytes {startByte}-{startByte + bufferSize - 1}/{fileSize}");
-                
-                var uploadResponse = await uploadClient.ExecuteAsync(uploadRequest);
-                var responseContent = uploadResponse.Content;
-
-                if (!uploadResponse.IsSuccessful)
-                {
-                    var error = SerializationExtensions.DeserializeResponseContent<ErrorDto>(responseContent);
-                    throw new PluginApplicationException(error.Error.Message);
-                }
-                
-                resumableUploadResult =
-                    SerializationExtensions.DeserializeResponseContent<ResumableUploadDto>(responseContent);
-
-                if (resumableUploadResult.NextExpectedRanges == null)
-                    fileMetadata = SerializationExtensions.DeserializeResponseContent<FileMetadataDto>(responseContent);
-                
-            } while (resumableUploadResult.NextExpectedRanges != null);
-        }
-
-        return fileMetadata;
+        return fileSize < fourMegabytesInBytes
+            ? await UploadSmallFile(file, input.File.Name, normalizedParentFolderId, conflictBehaviour)
+            : await UploadLargeFile(file, input.File.Name, fileSize, contentType, normalizedParentFolderId, conflictBehaviour);
     }
     
     [Action("Delete file", Description = "Delete file in a drive.")]
@@ -166,4 +128,204 @@ public class StorageActions(InvocationContext context, IFileManagementClient _fi
 
     [Action("[Debug] Action", Description = "Debug action")]
     public List<AuthenticationCredentialsProvider> DebugAction() => InvocationContext.AuthenticationCredentialsProviders.ToList();
+    
+    private static string NormalizeParentFolderId(string? parentFolderId)
+    {
+        return string.IsNullOrWhiteSpace(parentFolderId) ? "root" : parentFolderId;
+    }
+    
+    private async Task<List<FileMetadataDto>> GetAllFilesFromFolder(string folderId, bool recursive)
+    {
+        var result = new List<FileMetadataDto>();
+
+        string? next = $"/items/{folderId}/children";
+        do
+        {
+            var request = Uri.IsWellFormedUriString(next, UriKind.Absolute)
+                ? new RestRequest(new Uri(next!), Method.Get)
+                : new RestRequest(next!, Method.Get);
+
+            var pageResult = await Client.ExecuteWithHandling<ListWrapper<FileMetadataDto>>(request);
+
+            var page = pageResult?.Value ?? Array.Empty<FileMetadataDto>();
+
+            var files = page.Where(i => !string.IsNullOrEmpty(i.MimeType)).ToList();
+            result.AddRange(files);
+
+            if (recursive)
+            {
+                var folders = page.Where(i => string.IsNullOrEmpty(i.MimeType)).ToList();
+
+                foreach (var folder in folders)
+                {
+                    if (string.IsNullOrWhiteSpace(folder?.FileId)) 
+                        continue;
+                    
+                    var nestedFiles = await GetAllFilesFromFolder(folder.FileId, true);
+                    result.AddRange(nestedFiles);
+                }
+            }
+
+            next = pageResult?.ODataNextLink;
+        }
+        while (!string.IsNullOrEmpty(next));
+
+        return result;
+    }
+    
+    
+    private static string GetContentType(FileReference file)
+    {
+        return Path.GetExtension(file.Name) == ".txt"
+            ? MediaTypeNames.Text.Plain
+            : file.ContentType;
+    }
+
+    private async Task<FileMetadataDto> UploadSmallFile(
+        Stream file,
+        string fileName,
+        string parentFolderId,
+        string conflictBehaviour)
+    {
+        var uploadRequest = new RestRequest($".//items/{parentFolderId}:/{fileName}:/content" +
+                                            $"?@microsoft.graph.conflictBehavior={conflictBehaviour}", Method.Put);
+
+        uploadRequest.AddParameter("application/octet-stream", await file.GetByteData(), ParameterType.RequestBody);
+
+        return await Client.ExecuteWithHandling<FileMetadataDto>(uploadRequest);
+    }
+
+    private async Task<FileMetadataDto> UploadLargeFile(
+        Stream file,
+        string fileName,
+        long fileSize,
+        string contentType,
+        string parentFolderId,
+        string conflictBehaviour)
+    {
+        const int chunkSize = 3932160;
+
+        var resumableUploadResult = await CreateUploadSession(fileName, parentFolderId, conflictBehaviour);
+        using var uploadClient = CreateUploadClient(resumableUploadResult.UploadUrl, out var endpoint);
+
+        long uploadedBytes = 0;
+        var fileMetadata = new FileMetadataDto();
+
+        do
+        {
+            EnsureExpectedUploadRange(resumableUploadResult, uploadedBytes);
+
+            var bufferSize = (int)Math.Min(chunkSize, fileSize - uploadedBytes);
+            var buffer = await ReadChunk(file, bufferSize);
+
+            var uploadResponseContent = await UploadChunk(
+                uploadClient,
+                endpoint,
+                buffer,
+                contentType,
+                uploadedBytes,
+                fileSize);
+
+            uploadedBytes += buffer.Length;
+
+            resumableUploadResult =
+                uploadResponseContent.DeserializeResponseContent<ResumableUploadDto>();
+
+            if (resumableUploadResult.NextExpectedRanges == null)
+                fileMetadata = uploadResponseContent.DeserializeResponseContent<FileMetadataDto>();
+
+        } while (resumableUploadResult.NextExpectedRanges != null);
+
+        return fileMetadata;
+    }
+
+    private async Task<ResumableUploadDto> CreateUploadSession(
+        string fileName,
+        string parentFolderId,
+        string conflictBehaviour)
+    {
+        var createUploadSessionRequest = new RestRequest(
+            $".//items/{parentFolderId}:/{fileName}:/createUploadSession", Method.Post);
+
+        createUploadSessionRequest.AddJsonBody($@"
+            {{
+                ""deferCommit"": false,
+                ""item"": {{
+                    ""@microsoft.graph.conflictBehavior"": ""{conflictBehaviour}"",
+                    ""name"": ""{fileName}""
+                }}
+            }}");
+
+        return await Client.ExecuteWithHandling<ResumableUploadDto>(createUploadSessionRequest);
+    }
+
+    private static RestClient CreateUploadClient(string uploadUrl, out string endpoint)
+    {
+        var uri = new Uri(uploadUrl);
+        var baseUrl = uri.GetLeftPart(UriPartial.Authority);
+        endpoint = uri.PathAndQuery;
+
+        return new RestClient(new RestClientOptions { BaseUrl = new(baseUrl) });
+    }
+
+    private static void EnsureExpectedUploadRange(ResumableUploadDto resumableUploadResult, long uploadedBytes)
+    {
+        var expectedStartByte = GetNextExpectedStartByte(resumableUploadResult);
+        if (expectedStartByte != uploadedBytes)
+            throw new PluginApplicationException("Unexpected upload range returned. Cannot continue streaming upload.");
+    }
+
+    private static long GetNextExpectedStartByte(ResumableUploadDto resumableUploadResult)
+    {
+        var nextExpectedRange = resumableUploadResult.NextExpectedRanges?.FirstOrDefault();
+        return string.IsNullOrWhiteSpace(nextExpectedRange)
+            ? throw new PluginApplicationException("The next expected upload range is null or empty.")
+            : long.Parse(nextExpectedRange.Split("-")[0]);
+    }
+
+    private static async Task<byte[]> ReadChunk(Stream file, int bufferSize)
+    {
+        var buffer = new byte[bufferSize];
+
+        var totalBytesRead = 0;
+        while (totalBytesRead < bufferSize)
+        {
+            var bytesRead = await file.ReadAsync(buffer.AsMemory(totalBytesRead, bufferSize - totalBytesRead));
+            if (bytesRead == 0)
+                break;
+
+            totalBytesRead += bytesRead;
+        }
+
+        if (totalBytesRead == 0)
+            throw new PluginApplicationException("Unexpected end of file stream during upload.");
+
+        if (totalBytesRead != bufferSize)
+            Array.Resize(ref buffer, totalBytesRead);
+
+        return buffer;
+    }
+
+    private static async Task<string?> UploadChunk(
+        RestClient uploadClient,
+        string endpoint,
+        byte[] buffer,
+        string contentType,
+        long startByte,
+        long fileSize)
+    {
+        var uploadRequest = new RestRequest(endpoint, Method.Put);
+        uploadRequest.AddParameter(contentType, buffer, ParameterType.RequestBody);
+        uploadRequest.AddHeader("Content-Length", buffer.Length);
+        uploadRequest.AddHeader("Content-Range", $"bytes {startByte}-{startByte + buffer.Length - 1}/{fileSize}");
+
+        var uploadResponse = await uploadClient.ExecuteAsync(uploadRequest);
+        var responseContent = uploadResponse.Content;
+
+        if (uploadResponse.IsSuccessful) 
+            return responseContent;
+        
+        var error = responseContent.DeserializeResponseContent<ErrorDto>();
+        throw new PluginApplicationException(error.Error.Message);
+    }
 }
